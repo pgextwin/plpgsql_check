@@ -54,8 +54,14 @@ try {
     @'
 \set ON_ERROR_STOP on
 CREATE EXTENSION plpgsql_check;
-SELECT CASE WHEN extversion = '2.10' THEN 1 ELSE 1/0 END
-  FROM pg_extension WHERE extname = 'plpgsql_check';
+DO $verify$
+BEGIN
+  IF (SELECT extversion FROM pg_extension WHERE extname = 'plpgsql_check')
+      IS DISTINCT FROM '2.10' THEN
+    RAISE EXCEPTION 'Unexpected plpgsql_check SQL extension version';
+  END IF;
+END
+$verify$;
 CREATE TABLE public.pgextwin_plpgsql_check_probe (a integer NOT NULL);
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM public.pgextwin_plpgsql_check_probe) THEN
