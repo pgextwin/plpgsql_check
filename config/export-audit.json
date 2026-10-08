@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "upstreamCommit": "61776b0af7418d3fd593cccea73178e3d93c9ee1",
+  "sqlExtensionVersion": "2.10",
+  "moduleMagicExport": "Pg_magic_func",
+  "moduleInitializerExport": "_PG_init",
+  "requiredSqlSymbols": [
+    "plpgsql_check_function_tb",
+    "plpgsql_check_function",
+    "plpgsql_check_function_tb_name",
+    "plpgsql_check_function_name",
+    "plpgsql_make_pragma",
+    "plpgsql_show_dependency_tb",
+    "plpgsql_show_dependency_tb_name",
+    "plpgsql_profiler_function_tb",
+    "plpgsql_profiler_function_tb_name",
+    "plpgsql_profiler_function_statements_tb",
+    "plpgsql_profiler_function_statements_tb_name",
+    "plpgsql_profiler_install_fake_queryid_hook",
+    "plpgsql_profiler_remove_fake_queryid_hook",
+    "plpgsql_profiler_reset_all",
+    "plpgsql_profiler_reset",
+    "plpgsql_coverage_statements",
+    "plpgsql_coverage_statements_name",
+    "plpgsql_coverage_branches",
+    "plpgsql_coverage_branches_name",
+    "plpgsql_check_pragma",
+    "plpgsql_profiler_functions_all_tb",
+    "plpgsql_check_profiler_ctrl",
+    "plpgsql_check_tracer_ctrl"
+  ]
+}
