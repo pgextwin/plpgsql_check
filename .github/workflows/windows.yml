@@ -1,23 +1,76 @@
-name: Windows technical pilot (no publication)
+name: Windows CI/CD
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "release/**"
   workflow_dispatch:
 
+# Never cancel a partially completed release build/publication run.
 concurrency:
-  group: plpgsql-check-pilot-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
   windows:
+    if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
     permissions:
       contents: read
     uses: pgextwin/build/.github/workflows/build-extension.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
     with:
       extension_config_path: config/extension.json
       test_contract_path: config/test-contract.json
+
+  release_preflight:
+    if: ${{ startsWith(github.ref, 'refs/heads/release/') }}
+    name: Reject existing release and tag before attested build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Confirm this publication is new
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-release-absence.sh
+
+  release_build:
+    if: ${{ startsWith(github.ref, 'refs/heads/release/') }}
+    needs: release_preflight
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    uses: pgextwin/build/.github/workflows/build-extension-attested.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
+    with:
+      extension_config_path: config/extension.json
+      test_contract_path: config/test-contract.json
+
+  release_final_preflight:
+    name: Recheck release and tag before publication
+    needs: release_build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Confirm release/tag remain unused
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/check-release-absence.sh
+
+  release:
+    if: ${{ startsWith(github.ref, 'refs/heads/release/') }}
+    needs: [release_build, release_final_preflight]
+    permissions:
+      contents: write
+    uses: pgextwin/build/.github/workflows/release-extension.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
+    with:
+      extension_name: ${{ needs.release_build.outputs.extension_name }}
+      upstream_repository: ${{ needs.release_build.outputs.upstream_repository }}

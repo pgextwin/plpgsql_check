@@ -1,24 +1,58 @@
-# plpgsql_check Windows版 — pgextwin Step 16 技術Pilot
+# plpgsql_check Windows x64 非公式バイナリ — pgextwin
 
-日本語 | [English](README.md)
+**日本語** | [English](README.md)
 
-**状態：実装案・技術Pilot。正式GitHub Releaseおよび配布バイナリは未公開です。** このリポジトリは、[plpgsql_check](https://github.com/okbob/plpgsql_check)を通常のWindows x64 PostgreSQL向けに非公式にビルドするためのpgextwin用です。upstreamの公式プロジェクトとは独立しています。
+本リポジトリは[plpgsql_check](https://github.com/okbob/plpgsql_check)の**非公式Windows x64ビルド**を提供するpgextwinプロジェクトです。upstream公式プロジェクトやPostgreSQL本体による公式配布ではありません。
 
-## ソース、対応バージョンとライセンス
+最初の正式Releaseは **`v2.10.13-windows.1`** です。PG15〜18の4世代すべての実機CIとAttestation検証に成功した場合だけ公開します。
 
-- Upstream安定版：`v2.10.13`（2026-10-07 UTC公開）。
-- Tag object SHA：`72fa03e2bfc78289bdb4ef732024eefb5e707c64`。
-- Tagが指すcommit SHA：`61776b0af7418d3fd593cccea73178e3d93c9ee1`。
-- 対象：**PostgreSQL 15・16・17・18 / Windows x64**。PG14・PG19は対象外。
-- Upstream Releaseは**2.10.13**ですが、`plpgsql_check.control`の`default_version`は**2.10**で、インストール用SQLは`plpgsql_check--2.10.sql`です。これらを混同しません。
-- LICENSE本文はMIT形式。配布時はupstreamの原本を保持します。LICENSEのGit blob SHA：`994f55c62ea0dfedfd915d1559f8f27d386d4989`。
+**ダウンロード：** [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases)／[v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1)。Releaseがまだ表示されない場合は公開条件を満たしていません。通常CIのArtifactを署名付き正式版として扱わないでください。
 
-## 基本的な使い方
+## バージョンを混同しない
 
-後続Stepで実機検証を通過し正式公開が認められた場合、PostgreSQL majorに一致するZIPを選択します。PostgreSQL停止後にDLLを`lib/`へ、controlとSQLを`share/extension/`へコピーし、必要に応じて再起動したうえで以下を実行します。
+| 区分 | 値 |
+| --- | --- |
+| upstream repository | `okbob/plpgsql_check` |
+| upstream stable release / tag | `2.10.13` / `v2.10.13` |
+| annotated tag object SHA | `72fa03e2bfc78289bdb4ef732024eefb5e707c64` |
+| upstream commit SHA | `61776b0af7418d3fd593cccea73178e3d93c9ee1` |
+| SQL extension version | **`2.10`** |
+| pgextwin Release tag | **`v2.10.13-windows.1`** |
+| 対応対象 | Windows x64 / PostgreSQL **15、16、17、18** |
 
-```sql
+upstreamの`plpgsql_check.control`は`default_version = '2.10'`で、導入SQLは`plpgsql_check--2.10.sql`です。Release番号に合わせてSQL拡張バージョンを変更しません。**PG14とPG19は対象外**です。
+
+## ZIPの選択・導入
+
+PostgreSQLのメジャーバージョンに合うZIPをReleaseから選びます。
+
+- `plpgsql_check-v2.10.13-pg15-windows-x64.zip`
+- `plpgsql_check-v2.10.13-pg16-windows-x64.zip`
+- `plpgsql_check-v2.10.13-pg17-windows-x64.zip`
+- `plpgsql_check-v2.10.13-pg18-windows-x64.zip`
+
+ビルドとテストではpgextwin共通CIがChocolatey経由で固定バージョンのWindows版PostgreSQLを導入します。そのため、**すべてのWindows向けPostgreSQLディストリビューションとのABI互換性まで保証するものではありません**。メジャー、x64構成、ビルドと実行環境の互換性を確認し、運用前にはバックアップと事前検証を行ってください。
+
+導入は次の順序です。
+
+1. PostgreSQLサービスを停止してから、使用中の既存DLLの上書きを避けます。
+2. ZIPの`lib/plpgsql_check.dll`をPostgreSQLの`lib/`へ配置します。
+3. ZIPの`share/extension/`内にあるcontrolとSQLファイルをPostgreSQLの`share/extension/`へ配置します。
+4. `LICENSE`、`UPSTREAM-README.md`、`PGEXTWIN-README.md`、`PACKAGE-INFO.txt`、`PACKAGE-INFO.json`を保管します。
+5. 必要に応じてサービスを起動し、対象データベースで以下を実行します。
+
+~~~sql
 CREATE EXTENSION plpgsql_check;
+SELECT extversion FROM pg_extension WHERE extname = 'plpgsql_check';
+~~~
+
+通常の能動的なPL/pgSQL診断だけなら`shared_preload_libraries`は不要です。profiler、tracer、passive/shared modeなどは追加設定が必要な場合があり、本ReleaseのCIでは検証していません。これらを使う際はupstream文書に従ってください。
+
+## CIで実際に検証している機能
+
+PG15・16・17・18のそれぞれでWindows PostgreSQLサーバーを初期化・起動して`CREATE EXTENSION`を実行し、空テーブルを走査する関数の存在しないrecordフィールドを**関数の実行前に**`plpgsql_check_function_tb`で検出します。フィールド参照の修正後は診断が消えることまで確認します。
+
+~~~sql
 CREATE TABLE public.t (a integer);
 CREATE FUNCTION public.probe() RETURNS void LANGUAGE plpgsql AS $body$
 DECLARE r record;
@@ -30,30 +64,40 @@ END;
 $body$;
 SELECT message, sqlstate, level
 FROM plpgsql_check_function_tb('public.probe()'::regprocedure);
-```
+~~~
 
-テーブルが空でも、関数の実行前に存在しないrecord fieldを検出する診断が基本的な利用方法です。CIではエラーの内容を検証し、`r.a`へ修正した後は同じ診断が出ないことを確認する設計です。
+上の`r.missing`を`r.a`に修正し、同じ診断が出ないことを確認するのがCIシナリオです。upstreamコミット・LICENSE、MSVC/Meson/Ninjaビルド、DLL export、インストール、ZIP構造、PACKAGE-INFO JSON Schema、SPDX 2.3 SBOM、Grypeの動作も検証します。
 
-## preload要件
+**未検証：** profiler、tracer、passive/shared mode、server log assertion、SQL upgrade実行、PG majorをまたぐupgrade。拡張機能が持つすべての機能が検証済みという意味ではありません。
 
-通常の`plpgsql_check_function_tb`による能動的な診断には、**shared_preload_librariesは不要**です。profiler、tracer、passive/shared modeなどの高度機能は別の設定や事前ロードが関係するため、今回の保証・テスト範囲には含めていません。最低限の診断用途で専用クライアント実行ファイルやbackground workerは不要です。
+## SHA-256・SBOM・Attestation
 
-## Windowsビルド方式
+Releaseには各majorのZIPに加え`*.spdx.json`（SPDX 2.3 SBOM）、`*.vulnerabilities.json`（Grype結果）、`SHA256SUMS.txt`を添付します。ZIPには`PACKAGE-INFO.json`が入ります。
 
-既存のpgextwin共通Buildをfull-SHAで参照し、Windows Hook Contract v1の4本のPowerShell hookを使用します。MSVC x64、Meson、Ninja、対象PGのpg_configとpostgres.libを使用します。upstreamのimmutable tagとcommitを確認してから、使い捨てcheckoutに限定してWindows DEF export設定を追加します。SQLのCエントリーポイントとPG_FUNCTION_INFO_V1を照合し、独立した23個のsymbol監査記録（`config/export-audit.json`）との一致を確かめた上で、完成DLLをdumpbinで検証します。PG15〜18それぞれについて別個にbuild、install、CREATE EXTENSION、診断機能、ZIP構成を確認します。
+PowerShellでファイルのSHA-256を計算し、`SHA256SUMS.txt`の該当行と比較してください。
 
-共通Build側でPACKAGE-INFO.json、SPDX 2.3 SBOM、Grype（report-only）、checksumを扱います。通常CIではAttestationは作成しません。今回のworkflowにはRelease公開ジョブを含めません。更新監視もGitHub Issue通知のみです。
+~~~powershell
+Get-Content .\SHA256SUMS.txt
+(Get-FileHash .\plpgsql_check-v2.10.13-pg17-windows-x64.zip -Algorithm SHA256).Hash
+~~~
 
-## 未検証事項・制限
+各ZIP・各SPDXファイル・各脆弱性レポートについて確認します。Attestationの対象は**最終ZIPのdigest**です。Attestation生成後にZIPを変更しません。
 
-- **この設計のWindows実機CIはまだ成功確認されていません。** PG15〜18の成功は、実行結果を確認するまで宣言しません。
-- Windowsのpostgres.libにおける依存シンボルと、PL/pgSQL内部関数の動的解決は重要な検証ポイントです。
-- profiler、tracer、passive/shared mode、アップグレードSQLの実行検証、異なるPG major間のアップグレードは対象外です。
-- LICENSE、README、upstream source provenanceを維持し、公式upstream配布と誤認される表示をしません。
-- Release、Distribution Catalog配布登録、Websiteのダウンロードリンク、PG19 production metadata変更は今回行いません。
+**Build Provenance AttestationとSBOM AttestationはGitHub側に保存されます。Release assetとしての個別ファイルは存在しません。** 認証済みGitHub CLIで以下を実行します。
 
-[技術Pilotの補足資料](docs/technical-pilot.md)も参照してください。
+~~~powershell
+gh attestation verify .\plpgsql_check-v2.10.13-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml
+gh attestation verify .\plpgsql_check-v2.10.13-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml --predicate-type https://spdx.dev/Document/v2.3
+~~~
 
-## リポジトリ作成と事前検査
+各majorについて同様に検証できます。呼出元は`pgextwin/plpgsql_check`、署名workflowは`pgextwin/build/.github/workflows/build-extension-attested.yml`で、immutable full-SHAへpinされます。CIでは署名付きSPDX predicateと公開用SPDX JSONの一致も検証します。
 
-管理者が `gh` を認証したWindows環境では、同梱の [`scripts/bootstrap-repo.ps1`](scripts/bootstrap-repo.ps1) でOrganization内の空リポジトリ作成・レビュー用ブランチpush・Draft PR作成まで実施できます。手順は[こちら](docs/BOOTSTRAP.md)。`python -m unittest discover -s tests -v` でオフライン静的検査もできますが、Windows実機CIの代わりにはなりません。
+Grypeは**report-only**です。スキャン自体の失敗はCI失敗ですが、脆弱性が検出されたという理由だけでは配布を停止しません。検出ゼロでも安全性の証明ではなく、ビルド時点の脆弱性DBによる分析です。
+
+## GitHub Actionsの権限境界
+
+通常のPR/main CIは`contents: read`の`build-extension.yml`だけを使用します。release branch `release/v2.10.13-windows.1`では、Release/tagの未使用を確認し、4世代のattested buildを完了させ、公開直前に再確認してから共通`release-extension.yml`を呼び出します。Release公開ジョブの権限は`contents: write`のみです。
+
+共通Release workflowは既存Releaseのasset上書きに対応しているため、**公開済みReleaseの再実行や重複作成はしないでください**。このリポジトリの重複検出ゲートを迂回しないことが前提です。
+
+[Step 16技術Pilotの履歴](docs/technical-pilot.md)と[共通Attestation解説](https://github.com/pgextwin/build/blob/main/docs/artifact-attestations.md)も参照してください。

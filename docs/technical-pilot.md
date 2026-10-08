@@ -1,3 +1,5 @@
+> **Historical Step 16 record (2026-10-08):** The pilot gates listed below were subsequently satisfied by PR #1 and Windows CI runs [37805386211](https://github.com/pgextwin/plpgsql_check/actions/runs/37805386211) and [37807647325](https://github.com/pgextwin/plpgsql_check/actions/runs/37807647325). The text below preserves the Step 16 plan at the time it was written, not the current release status. For release support and verification, see [English README](../README.md) or [日本語 README](../README_ja.md). Step 17 implements release-only attestation and GitHub Release publication separately from this pilot.
+
 # Step 16 handoff and release gating notes
 
 ## Provenance

@@ -61,17 +61,49 @@ class ContractSanityChecks(unittest.TestCase):
         for name in ('build', 'package'):
             self.assertIn(UPSTREAM_COMMIT, (ROOT / 'windows' / 'ci' / (name + '.ps1')).read_text())
 
-    def test_github_workflows_are_read_only_and_not_release(self):
+    def test_github_workflows_split_permissions_and_release_gates(self):
         workflow = ROOT / '.github/workflows/windows.yml'
-        content = workflow.read_text()
+        content = workflow.read_text(encoding='utf-8')
         doc = yaml.load(content, Loader=yaml.BaseLoader)
         self.assertEqual(doc['permissions'], {'contents': 'read'})
-        self.assertEqual(set(doc['jobs']), {'windows'})
-        self.assertIn(f'@{BUILD_COMMIT}', content)
-        self.assertNotIn('release-extension.yml', content)
-        self.assertNotIn('id-token: write', content)
-        self.assertNotIn('attestations: write', content)
-        self.assertNotIn('contents: write', content)
+        jobs = doc['jobs']
+        self.assertEqual(
+            set(jobs),
+            {'windows', 'release_preflight', 'release_build',
+             'release_final_preflight', 'release'},
+        )
+        self.assertEqual(jobs['windows']['permissions'], {'contents': 'read'})
+        self.assertIn(f'build-extension.yml@{BUILD_COMMIT}', jobs['windows']['uses'])
+        self.assertIn(f'build-extension-attested.yml@{BUILD_COMMIT}', jobs['release_build']['uses'])
+        self.assertIn(f'release-extension.yml@{BUILD_COMMIT}', jobs['release']['uses'])
+        self.assertEqual(jobs['release_build']['permissions'], {
+            'contents': 'read',
+            'id-token': 'write',
+            'attestations': 'write',
+            'artifact-metadata': 'write',
+        })
+        self.assertEqual(jobs['release']['permissions'], {'contents': 'write'})
+        self.assertEqual(jobs['release_build']['needs'], 'release_preflight')
+        self.assertEqual(set(jobs['release']['needs']), {
+            'release_build', 'release_final_preflight',
+        })
+        self.assertEqual(jobs['release_final_preflight']['needs'], 'release_build')
+        for job in ('release_preflight', 'release_final_preflight'):
+            self.assertEqual(jobs[job]['permissions'], {'contents': 'read'})
+            self.assertIn('bash scripts/check-release-absence.sh', content)
+        self.assertNotIn('pull_request_target', content)
+        self.assertIn('cancel-in-progress: false', content)
+        self.assertIn('release/**', content)
+
+    def test_release_guard_is_fail_closed_and_single_version(self):
+        guard = (ROOT / 'scripts/check-release-absence.sh').read_text(encoding='utf-8')
+        for expected in (
+            'set -euo pipefail', 'release/v2.10.13-windows.1',
+            'pgextwin/plpgsql_check', 'releases/tags/$tag',
+            'git/ref/tags/$tag', '404)', '200)', 'Unexpected GitHub API HTTP',
+        ):
+            self.assertIn(expected, guard)
+        self.assertNotIn('--clobber', guard)
 
     def test_watcher_metadata_only(self):
         w = json_file('config/update-watch.json')

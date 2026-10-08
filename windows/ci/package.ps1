@@ -49,7 +49,7 @@ foreach ($file in @(Get-ChildItem $UpstreamDir -File -Filter 'plpgsql_check--*.s
     if (-not (Test-Path $target)) { Copy-Item $file.FullName $target }
 }
 $description = @"
-plpgsql_check Windows binary package (technical pilot)
+plpgsql_check Windows binary package (unofficial pgextwin release)
 =======================================================
 Upstream repository: $UpstreamRepository
 Upstream ref: $UpstreamRef
@@ -62,11 +62,11 @@ Architecture: Windows x64
 Compiler: MSVC
 License: MIT-style; see LICENSE
 
-This is an unofficial pgextwin Windows package; not a formal published Release.
+This is an unofficial pgextwin Windows binary; not an official upstream distribution.
 Copy lib/plpgsql_check.dll to PostgreSQL's lib directory and
 share/extension/* to its share/extension directory. CREATE EXTENSION plpgsql_check;
 Active linting via plpgsql_check_function_tb does not require shared preload.
-The profiler, tracer, shared modes and upgrades are not covered by this pilot.
+Profiler, tracer, passive/shared modes and SQL upgrades are not covered by release CI.
 "@
 [IO.File]::WriteAllText((Join-Path $stage 'PACKAGE-INFO.txt'), $description, [Text.UTF8Encoding]::new($false))
 Copy-Item (Join-Path $PSScriptRoot '..\..\README.md') (Join-Path $stage 'PGEXTWIN-README.md')
@@ -82,6 +82,6 @@ try {
     }
 }
 finally { $archive.Dispose() }
-Write-Host "Validated pilot package structure: $zip"
+Write-Host "Validated release package structure: $zip"
 # The shared reusable workflow subsequently injects and validates PACKAGE-INFO.json,
 # SPDX SBOM, Grype report and final SHA checksums; no attestation in normal CI.

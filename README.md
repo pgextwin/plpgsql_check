@@ -1,24 +1,51 @@
-# plpgsql_check for Windows — pgextwin Step 16 technical pilot
+# plpgsql_check for Windows — unofficial pgextwin binaries
 
-[日本語](README_ja.md) | English
+[日本語](README_ja.md) | **English**
 
-**Status: source integration proposed; NOT a published binary release.** This repository is intended for the `pgextwin` organization. It packages **unofficial** Windows x64 builds of [plpgsql_check](https://github.com/okbob/plpgsql_check). The project and its source are maintained by upstream, not by pgextwin.
+This repository produces **unofficial Windows x64 builds** of [plpgsql_check](https://github.com/okbob/plpgsql_check) for PostgreSQL 15, 16, 17 and 18. It is independent of upstream and of the PostgreSQL project. The first production release is **`v2.10.13-windows.1`**. Release publication is gated by all four Windows build/runtime tests and artifact-attestation verification.
 
-## Source, compatibility and provenance
+**Downloads:** [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases) · [v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1). If a release has not yet appeared, the release-branch workflow has not completed; do not substitute normal-CI artifacts for signed release packages.
 
-- Upstream stable release: [`v2.10.13`](https://github.com/okbob/plpgsql_check/releases/tag/v2.10.13) (published 2026-10-07 UTC).
-- Annotated tag object SHA: `72fa03e2bfc78289bdb4ef732024eefb5e707c64`.
-- Resolved pinned commit SHA: `61776b0af7418d3fd593cccea73178e3d93c9ee1`.
-- PostgreSQL target majors: **15, 16, 17, 18** on Windows x64. Neither PostgreSQL 14 nor 19 is part of this pilot.
-- Upstream release version is **2.10.13**, but `plpgsql_check.control` declares **SQL extension version 2.10**, installed from `plpgsql_check--2.10.sql`. This is intentional and verified against the pinned tree.
-- License: upstream `LICENSE` contains MIT permission/notice text. The packaged license is byte-for-byte the upstream file; its Git blob SHA is `994f55c62ea0dfedfd915d1559f8f27d386d4989`.
+## Exact version identity
 
-## What is validated
+| Identity | Value |
+| --- | --- |
+| Upstream repository | `okbob/plpgsql_check` |
+| Upstream stable tag / release | `v2.10.13` / `2.10.13` |
+| Upstream annotated tag object | `72fa03e2bfc78289bdb4ef732024eefb5e707c64` |
+| Upstream source commit | `61776b0af7418d3fd593cccea73178e3d93c9ee1` |
+| SQL extension `default_version` | `2.10` (not `2.10.13`) |
+| pgextwin Windows release | `v2.10.13-windows.1` |
+| Windows target | x64, PostgreSQL 15–18 only |
+| Upstream source license | MIT-style permission text, preserved verbatim in `LICENSE` |
 
-The essential function of this extension is static checking of PL/pgSQL functions. CI starts an isolated PostgreSQL instance, creates an empty table and a PL/pgSQL function referencing `r.missing` in a loop over that empty table, and calls `plpgsql_check_function_tb` to check that the missing field is diagnosed **without executing the function**. The test then corrects the function, confirms the diagnostic is absent, and cleans up.
+The upstream control file sets `default_version = '2.10'`, and the installation script is `plpgsql_check--2.10.sql`. The packaging release number does **not** change the SQL extension version. PostgreSQL 14 and 19 are not covered.
 
-```sql
+## Download and installation
+
+Select the ZIP for the **exact PostgreSQL major** installed on your Windows x64 machine:
+
+- `plpgsql_check-v2.10.13-pg15-windows-x64.zip`
+- `plpgsql_check-v2.10.13-pg16-windows-x64.zip`
+- `plpgsql_check-v2.10.13-pg17-windows-x64.zip`
+- `plpgsql_check-v2.10.13-pg18-windows-x64.zip`
+
+These builds are tested against the Windows PostgreSQL binaries installed by the pgextwin CI from version-pinned Chocolatey packages. They are **not guaranteed to be ABI-compatible** with every third-party Windows PostgreSQL distribution or different compiler/runtime configuration. Use the same PostgreSQL major and a compatible x64 server distribution; back up and test before deployment. Cross-major copying is unsupported.
+
+Stop the PostgreSQL service before replacing existing loaded DLLs. Extract the ZIP and copy `lib/plpgsql_check.dll` to the server installation's `lib/`, and the contents of `share/extension/` to its `share/extension/`. Retain `LICENSE`, `UPSTREAM-README.md`, `PGEXTWIN-README.md`, `PACKAGE-INFO.txt`, and `PACKAGE-INFO.json` for attribution and source/build identity. Restart PostgreSQL as appropriate. Connect to each database that needs the extension and execute:
+
+~~~sql
 CREATE EXTENSION plpgsql_check;
+SELECT extversion FROM pg_extension WHERE extname = 'plpgsql_check';
+~~~
+
+Normal active function checking does not need `shared_preload_libraries`. Optional profiler, tracer, passive/shared modes can require different configuration and are **not validated** by our release test. Follow upstream guidance before enabling them.
+
+## Validated functionality (only)
+
+CI starts a real isolated PostgreSQL server for each of PG15–18, installs the DLL/control/SQL, creates the extension, checks a missing record-field diagnostic *without executing the function*, then fixes the function and verifies the diagnostic disappears:
+
+~~~sql
 CREATE TABLE public.t (a integer);
 CREATE FUNCTION public.probe() RETURNS void LANGUAGE plpgsql AS $body$
 DECLARE r record;
@@ -30,41 +57,36 @@ END;
 $body$;
 SELECT message, sqlstate, level
 FROM plpgsql_check_function_tb('public.probe()'::regprocedure);
-```
+~~~
 
-**Preloading:** Normal active diagnostics do not require `shared_preload_libraries` or `session_preload_libraries`. Optional passive tracing/profiling/shared-memory modes have different initialization and configuration considerations; they are **not validated by this pilot**. No background worker or client executable is required for this minimal use case.
+Change `r.missing` to `r.a` and check again. The release pipeline additionally verifies upstream source SHA/license, MSVC/Meson/Ninja build, required DLL exports, Windows PostgreSQL startup, ZIP layout, PACKAGE-INFO schema, SPDX 2.3 SBOM, and Grype scan execution.
 
-## Installing a future validated ZIP
+**Not covered:** profiler, tracer, passive/shared modes, server-log assertions, SQL upgrade tests, and PostgreSQL cross-major upgrades. Do not interpret successful `CREATE EXTENSION` or this single smoke scenario as complete API validation.
 
-There are **no downloadable released ZIPs from this Step**. If a later release gate approves them, select the ZIP for your PostgreSQL major, stop your PostgreSQL server before replacing loaded binaries, then extract:
+## Checksums, SBOM, and GitHub Artifact Attestations
 
-- `lib/plpgsql_check.dll` → PostgreSQL installation `lib/`.
-- `share/extension/plpgsql_check.control` and `plpgsql_check--2.10.sql` → PostgreSQL installation `share/extension/`.
-- Keep `LICENSE`, `UPSTREAM-README.md` and `PACKAGE-INFO.*` for attribution and provenance.
+Release assets include one ZIP, corresponding `*.spdx.json` and `*.vulnerabilities.json` per PG major, plus `SHA256SUMS.txt`. Each ZIP contains validated `PACKAGE-INFO.json`; the SPDX 2.3 SBOM describes the finalized ZIP. The vulnerability JSON is a **report-only** Grype scan against the database available at build time: it does not block publication for detected CVEs, and zero findings do not prove an absence of vulnerabilities.
 
-Restart the server as needed and execute `CREATE EXTENSION plpgsql_check;` in each intended database. Upstream documents optional modes and safety restrictions; refer to its README before enabling profiling/tracing in production.
+After downloading the files, verify SHA-256 (run PowerShell in the download directory):
 
-## Build and CI integration
+~~~powershell
+Get-Content .\SHA256SUMS.txt
+(Get-FileHash .\plpgsql_check-v2.10.13-pg17-windows-x64.zip -Algorithm SHA256).Hash
+~~~
 
-The [`pgextwin/build`](https://github.com/pgextwin/build) reusable **normal build** is referenced by an immutable full commit SHA. Four extension-owned Windows PowerShell hooks implement Hook Contract v1:
+Compare the hash with the corresponding entry (and similarly check every asset). The release publication workflow generates checksums from the same final artifact bytes published to GitHub Releases. The ZIP is **not repackaged after attestation**.
 
-1. `build.ps1`: verify the checked-out upstream commit, PostgreSQL major, expected SQL/control files and Meson structure; discover SQL C entry points and PG_FUNCTION_INFO_V1 declarations; compare them against the independent 23-symbol export audit; generate a DEF file; adapt the *disposable* upstream Meson checkout; build with pinned Meson/Ninja and MSVC x64, and verify all required DLL exports using `dumpbin`.
-2. `install.ps1`: copy the matching DLL, control file and upstream-provided SQL scripts into a disposable PostgreSQL installation.
-3. `smoke-test.ps1`: initialize and start an isolated PG cluster without preload, test CREATE EXTENSION and the missing-record-field scenario, stop PG and remove temporary files in `finally`.
-4. `package.ps1`: create and inspect a ZIP in `lib/`, `share/extension/` layout and preserve upstream license/readme.
+GitHub Artifact Attestations are stored in GitHub, **not** uploaded as separate Release asset files. With authenticated GitHub CLI, validate the downloaded ZIP and the reusable signer workflow:
 
-The shared workflow handles Test Contract v2 validation, PACKAGE-INFO.json finalization, SPDX 2.3 SBOM generation, Grype **report-only** scanning, final checksums and CI artifacts. Normal CI does **not** produce build-provenance or SBOM attestations. The pilot workflow deliberately contains **no Release publishing job**. The Update Watch is release-metadata-only and can only create/update Issues; it never executes candidate sources, changes version pins or publishes binaries.
+~~~powershell
+gh attestation verify .\plpgsql_check-v2.10.13-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml
+gh attestation verify .\plpgsql_check-v2.10.13-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml --predicate-type https://spdx.dev/Document/v2.3
+~~~
 
-## Limitations / release gates
+Repeat per PostgreSQL major. The release CI verifies both attestation types and also compares the verified SPDX predicate against the standalone SBOM. The caller repository is `pgextwin/plpgsql_check`; the signer workflow is in `pgextwin/build`, pinned by an immutable 40-character commit SHA.
 
-- Windows build, PostgreSQL startup, DLL symbols and functional assertions require actual GitHub Windows runner execution. These are **unverified until CI passes on all four majors**.
-- The main CI validates the *active diagnostic path only*. Profiler, tracer, passive checks, shared mode, SQL upgrades and cross-major upgrades remain **not covered**.
-- Windows PostgreSQL's `postgres.lib` and PL/pgSQL's dynamically loaded internal function surface are possible integration blockers. The build does not mask unresolved imports or test failures.
-- The Meson DEF customization applies to an SHA-verified throwaway checkout only, never upstream. An unexpected source layout aborts the build.
-- No GitHub Release, Distribution Catalog entry, website download URL or PG19 production metadata update is authorized here.
+## Build and release safety
 
-See [technical notes](docs/technical-pilot.md) for the intended quality gates and follow-up work.
+Regular PR/main CI uses the read-only `build-extension.yml` workflow. A `release/v2.10.13-windows.1` branch first checks that **neither the Release nor tag exists**, builds all four majors using `build-extension-attested.yml`, rechecks Release/tag absence, then calls `release-extension.yml` to publish. The standalone common release workflow supports clobbering on reuse; **do not manually rerun a published release**, and do not bypass this repository's duplicate-release gates. The complete matrix must succeed before publication.
 
-## Local preflight
-
-Run `python -m unittest discover -s tests -v` for offline structural sanity checks. Passing these checks does not replace Windows CI.
+See [historical Step 16 pilot notes](docs/technical-pilot.md) and the [shared supply-chain docs](https://github.com/pgextwin/build/blob/main/docs/artifact-attestations.md). A successful normal CI artifact is **not** a signed production release.
