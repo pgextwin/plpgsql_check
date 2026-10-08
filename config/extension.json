@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "name": "plpgsql_check",
+  "upstream": {
+    "repository": "okbob/plpgsql_check",
+    "ref": "v2.10.13",
+    "version": "2.10.13"
+  },
+  "postgresql": {
+    "majors": [15, 16, 17, 18]
+  },
+  "windows": { "architecture": "x64" },
+  "license": {
+    "verifyAgainstUpstream": true,
+    "upstreamPath": "LICENSE"
+  }
+}

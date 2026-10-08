@@ -1,0 +1,27 @@
+name: Upstream update watch
+
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Detect updates without modifying Issues
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  watch:
+    permissions:
+      contents: read
+      issues: write
+    uses: pgextwin/build/.github/workflows/check-extension-updates.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
+    with:
+      extension_config_path: config/extension.json
+      update_watch_path: config/update-watch.json
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}

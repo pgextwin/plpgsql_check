@@ -1,0 +1,10 @@
+/dist/
+/.pgextwin-build/
+/upstream/
+*.dll
+*.obj
+*.lib
+*.exe
+__pycache__/
+*.py[cod]
+.pytest_cache/

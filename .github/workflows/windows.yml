@@ -1,0 +1,23 @@
+name: Windows technical pilot (no publication)
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: plpgsql-check-pilot-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    permissions:
+      contents: read
+    uses: pgextwin/build/.github/workflows/build-extension.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
+    with:
+      extension_config_path: config/extension.json
+      test_contract_path: config/test-contract.json
