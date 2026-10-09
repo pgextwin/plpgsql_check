@@ -37,7 +37,7 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertIn("build-extension.yml@", WINDOWS)
 
     def test_immutable_reusable_workflows(self):
-        uses = re.findall(r"(?m)^\s+uses:\s+([^\s#]+)", PROMOTION)
+        uses = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s+([^\s#]+)", PROMOTION)
         self.assertGreaterEqual(len(uses),5)
         self.assertTrue(all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", item) for item in uses), uses)
 
