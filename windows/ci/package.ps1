@@ -12,7 +12,12 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $manifest = Get-Content (Join-Path $PSScriptRoot '..\..\config\extension.json') -Raw | ConvertFrom-Json
 $expectedSha = [string]$manifest.upstream.commit
-if ($expectedSha -cnotmatch '^[0-9a-f]{40} -notmatch ('^' + $PostgreSqlMajor + '\.')) {
+if ($expectedSha -cnotmatch '^[0-9a-f]{40}$' -or
+    $UpstreamRepository -cne 'okbob/plpgsql_check' -or
+    $UpstreamRef -cne [string]$manifest.upstream.ref -or
+    $UpstreamVersion -cne [string]$manifest.upstream.version -or
+    $PostgreSqlMajor -notin @(15,16,17,18) -or
+    $PostgreSqlMinor -notmatch ('^' + $PostgreSqlMajor + '\.')) {
     throw 'Unexpected upstream identity, PG major, or tested minor in package hook.'
 }
 $upstreamSha = (& git -C $UpstreamDir rev-parse HEAD).Trim()
