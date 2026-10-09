@@ -21,7 +21,7 @@ jobs:
     if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
     permissions:
       contents: read
-    uses: pgextwin/build/.github/workflows/build-extension.yml@9945fff768e6e388401d725bee7a4d113ea3e00d
+    uses: pgextwin/build/.github/workflows/build-extension.yml@21c99b933da98f397f739971e738ecb685fe55d2
     with:
       extension_config_path: config/extension.json
       test_contract_path: config/test-contract.json
@@ -76,59 +76,16 @@ jobs:
       upstream_repository: ${{ needs.release_build.outputs.upstream_repository }}
 
   candidate_report:
-    name: Candidate matrix verification and PR evidence
-    if: always() && github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/auto-candidate/')
+    name: Verify PG-major candidate artifacts and annotate owned PR
+    if: ${{ always() && github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/heads/auto-candidate/') }}
     needs: windows
-    runs-on: ubuntu-latest
     permissions:
       contents: read
       actions: read
       issues: write
-    steps:
-      - name: Require every maintained PG-major artifact and annotate candidate PR
-        env:
-          GH_TOKEN: ${{ github.token }}
-          MATRIX_RESULT: ${{ needs.windows.result }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          branch="$GITHUB_REF_NAME"
-          pr="$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$branch" \
-            --state open --json number --jq '.[0].number')"
-          if [[ ! "$pr" =~ ^[0-9]+$ ]]; then
-            echo "::error::Missing open candidate PR"
-            exit 1
-          fi
-          ok=true
-          if [ "$MATRIX_RESULT" != "success" ]; then
-            ok=false
-          fi
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?per_page=100" \
-            --jq '.artifacts[].name' > "$RUNNER_TEMP/artifact-names.txt"
-          for major in 15 16 17 18; do
-            if ! grep -Fxq "plpgsql_check-pg$major-windows-x64" "$RUNNER_TEMP/artifact-names.txt"; then
-              echo "::error::Missing candidate artifact for PG$major"
-              ok=false
-            fi
-          done
-          if [ "$ok" = true ]; then
-            status="VERIFIED CANDIDATE (PG15-18)"
-          else
-            status="FAILED / INCOMPLETE CANDIDATE"
-          fi
-          cat > "$RUNNER_TEMP/candidate-comment.md" <<EOF
-          <!-- pgextwin-candidate-run:$GITHUB_RUN_ID:$GITHUB_RUN_ATTEMPT -->
-          ## $status
-
-          - Read-only Windows CI run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
-          - Matrix result: $MATRIX_RESULT
-          - Expected PG major artifacts: PG15, PG16, PG17, PG18
-          - Evidence: each per-major Actions artifact must contain ZIP, SPDX SBOM and Grype report after successful shared packaging steps.
-          - Candidate CI has **no Release publication, provenance attestation, or Catalog/Website update**.
-          - A later attested Release must be built from a reviewed commit after independent source/export audit.
-          EOF
-          gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/candidate-comment.md"
-          if [ "$ok" != true ]; then exit 1; fi
+    uses: pgextwin/build/.github/workflows/verify-candidate.yml@21c99b933da98f397f739971e738ecb685fe55d2
+    with:
+      matrix_result: ${{ needs.windows.result }}
 
   release_gate_tests:
     name: Regression-test immutable Release preflight

@@ -21,7 +21,7 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: pgextwin/build/.github/workflows/check-extension-updates.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
+    uses: pgextwin/build/.github/workflows/check-extension-updates.yml@21c99b933da98f397f739971e738ecb685fe55d2
     with:
       extension_config_path: config/extension.json
       update_watch_path: config/update-watch.json
@@ -34,7 +34,7 @@ jobs:
       contents: write
       pull-requests: write
       actions: write
-    uses: pgextwin/build/.github/workflows/candidate-update.yml@45e068b0f04d1b54b9c5b2abd1ca7b74e80b718f
+    uses: pgextwin/build/.github/workflows/candidate-update.yml@21c99b933da98f397f739971e738ecb685fe55d2
     with:
       extension_config_path: config/extension.json
       update_watch_path: config/update-watch.json
