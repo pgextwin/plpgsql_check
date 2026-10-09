@@ -4,12 +4,20 @@
   "upstream": {
     "repository": "okbob/plpgsql_check",
     "ref": "v2.10.13",
-    "version": "2.10.13"
+    "version": "2.10.13",
+    "commit": "61776b0af7418d3fd593cccea73178e3d93c9ee1"
   },
   "postgresql": {
-    "majors": [15, 16, 17, 18]
+    "majors": [
+      15,
+      16,
+      17,
+      18
+    ]
   },
-  "windows": { "architecture": "x64" },
+  "windows": {
+    "architecture": "x64"
+  },
   "license": {
     "verifyAgainstUpstream": true,
     "upstreamPath": "LICENSE"
