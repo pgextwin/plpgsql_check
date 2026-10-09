@@ -70,7 +70,7 @@ jobs:
     needs: [release_build, release_final_preflight]
     permissions:
       contents: write
-    uses: pgextwin/build/.github/workflows/release-extension.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
+    uses: pgextwin/build/.github/workflows/release-extension.yml@9945fff768e6e388401d725bee7a4d113ea3e00d
     with:
       extension_name: ${{ needs.release_build.outputs.extension_name }}
       upstream_repository: ${{ needs.release_build.outputs.upstream_repository }}
