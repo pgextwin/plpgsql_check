@@ -1,0 +1,27 @@
+name: Validate Step 19 PowerShell hooks
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Parse every Windows hook with PowerShell
+        shell: pwsh
+        run: |
+          foreach ($script in @('windows/ci/build.ps1','windows/ci/package.ps1','windows/ci/install.ps1','windows/ci/smoke-test.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script).Path, [ref]$tokens, [ref]$errors)
+            foreach ($error in @($errors)) {
+              Write-Host "::error file=$script,line=$($error.Extent.StartLineNumber),col=$($error.Extent.StartColumnNumber)::$($error.Message)"
+            }
+            if (@($errors).Count -gt 0) { throw "PowerShell parser rejected $script" }
+          }
+          Write-Host 'All Windows PowerShell hooks parsed successfully.'
