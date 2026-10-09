@@ -25,3 +25,17 @@ jobs:
       extension_config_path: config/extension.json
       update_watch_path: config/update-watch.json
       dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+
+  candidate:
+    name: Detect, prepare, and dispatch new stable Windows candidate
+    needs: watch
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+    uses: pgextwin/build/.github/workflows/candidate-update.yml@0ac9dd648233fd66a2765faf941f4d584cc32720
+    with:
+      extension_config_path: config/extension.json
+      update_watch_path: config/update-watch.json
+      candidate_policy_path: config/candidate-build.json
+      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
