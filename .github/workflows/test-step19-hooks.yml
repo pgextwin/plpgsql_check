@@ -19,8 +19,8 @@ jobs:
             $tokens = $null
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script).Path, [ref]$tokens, [ref]$errors)
-            foreach ($error in @($errors)) {
-              Write-Host "::error file=$script,line=$($error.Extent.StartLineNumber),col=$($error.Extent.StartColumnNumber)::$($error.Message)"
+            foreach ($parseError in @($errors)) {
+              Write-Host "::error file=$script,line=$($parseError.Extent.StartLineNumber),col=$($parseError.Extent.StartColumnNumber)::$($parseError.Message)"
             }
             if (@($errors).Count -gt 0) { throw "PowerShell parser rejected $script" }
           }
