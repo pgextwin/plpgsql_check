@@ -20,7 +20,7 @@ jobs:
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script).Path, [ref]$tokens, [ref]$errors)
             foreach ($parseError in @($errors)) {
-              Write-Host "::error file=$script,line=$($parseError.Extent.StartLineNumber),col=$($parseError.Extent.StartColumnNumber)::$($parseError.Message)"
+              Write-Host "PARSE_ERROR $script LINE $($parseError.Extent.StartLineNumber) COLUMN $($parseError.Extent.StartColumnNumber) : $($parseError.Message)"
             }
             if (@($errors).Count -gt 0) { throw "PowerShell parser rejected $script" }
           }
