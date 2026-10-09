@@ -10,7 +10,11 @@ $ErrorActionPreference = 'Stop'
 $manifest = Get-Content (Join-Path $PSScriptRoot '..\..\config\extension.json') -Raw | ConvertFrom-Json
 $expectedSha = [string]$manifest.upstream.commit
 $expectedVersion = [string]$manifest.upstream.version
-if ($expectedSha -cnotmatch '^[0-9a-f]{40} = (& git -C $UpstreamDir rev-parse HEAD).Trim()
+if ($expectedSha -cnotmatch '^[0-9a-f]{40}$' -or
+    $manifest.upstream.repository -cne 'okbob/plpgsql_check') {
+    throw 'Missing or malformed pinned upstream source identity.'
+}
+$actualSha = (& git -C $UpstreamDir rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $actualSha -cne $expectedSha) {
     throw "Upstream source identity mismatch; expected $expectedSha, got '$actualSha'."
 }
