@@ -24,6 +24,7 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertIn("needs: [authorize, release_build]", PROMOTION)
         self.assertIn("cancel-in-progress: false", PROMOTION)
         self.assertIn("promotion-recovery", PROMOTION)
+        self.assertIn("environment: formal-release", PROMOTION)
         self.assertIn("publish-release.py", PROMOTION)
         self.assertNotIn("pull_request_target", PROMOTION)
         self.assertNotIn("--clobber", PROMOTION)
