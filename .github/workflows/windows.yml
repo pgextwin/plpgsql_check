@@ -132,7 +132,7 @@ jobs:
 
   release_gate_tests:
     name: Regression-test immutable Release preflight
-    if: !startsWith(github.ref, 'refs/heads/release/')
+    if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
