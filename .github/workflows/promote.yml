@@ -95,6 +95,7 @@ jobs:
   publish:
     name: Verify signatures and SHA; create-only formal publication
     needs: [authorize, release_build]
+    environment: formal-release # Optional extra Required Reviewers barrier in GitHub Environments
     runs-on: ubuntu-latest
     permissions:
       contents: write
