@@ -36,7 +36,8 @@ $sqlPath = Join-Path $UpstreamDir 'plpgsql_check--2.10.sql'
 if (-not (Test-Path $sqlPath)) { throw 'The control-required SQL install script is missing.' }
 $mesonPath = Join-Path $UpstreamDir 'meson.build'
 $meson = Get-Content $mesonPath -Raw
-if ($meson -notmatch ("project\('plpgsql_check',\s*\['c'\],\s*version:\s*'" + [regex]::Escape($expectedVersion) + "'\)")) {
+$expectedMesonPattern = "project\('plpgsql_check',\s*\['c'\],\s*version:\s*'" + [regex]::Escape($expectedVersion) + "'\)"
+if ($meson -notmatch $expectedMesonPattern) {
     throw 'Upstream Meson project version or structure changed unexpectedly.'
 }
 $magicSource = Get-Content (Join-Path $UpstreamDir 'src\plpgsql_check.c') -Raw
