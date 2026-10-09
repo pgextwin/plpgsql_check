@@ -21,7 +21,7 @@ jobs:
     if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
     permissions:
       contents: read
-    uses: pgextwin/build/.github/workflows/build-extension.yml@0ac9dd648233fd66a2765faf941f4d584cc32720
+    uses: pgextwin/build/.github/workflows/build-extension.yml@2c6cd6a5b122f0ba1870e9d70cb84cc949bd281d
     with:
       extension_config_path: config/extension.json
       test_contract_path: config/test-contract.json
