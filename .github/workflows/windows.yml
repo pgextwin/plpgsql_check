@@ -129,3 +129,14 @@ jobs:
           EOF
           gh pr comment "$pr" --repo "$GITHUB_REPOSITORY" --body-file "$RUNNER_TEMP/candidate-comment.md"
           if [ "$ok" != true ]; then exit 1; fi
+
+  release_gate_tests:
+    name: Regression-test immutable Release preflight
+    if: {{ !startsWith(github.ref, 'refs/heads/release/') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Run release gate fixture tests
+        run: python3 tests/test_release_gate.py
