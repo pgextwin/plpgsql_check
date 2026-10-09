@@ -59,4 +59,6 @@ jobs:
           Write-Host 'All plpgsql_check Windows hook scripts parsed successfully.'
 
       - name: Run release gate fixture tests
-        run: python3 tests/test_release_gate.py
+        run: |
+          python3 tests/test_release_gate.py
+          python3 tests/test_promotion_workflow.py
