@@ -136,3 +136,39 @@ jobs:
           name: promotion-recovery
           path: ${{ runner.temp }}/promotion-recovery.json
           if-no-files-found: warn
+
+  catalog_sync:
+    name: Dispatch signed Release Catalog PR generation with short-lived App token
+    needs: publish
+    if: vars.PGEXTWIN_CATALOG_APP_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Mint installation token for Catalog Actions only
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.PGEXTWIN_CATALOG_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PGEXTWIN_CATALOG_APP_PRIVATE_KEY }}
+          owner: pgextwin
+          repositories: catalog
+          permission-actions: write
+      - name: Request independent public Release validation and Catalog PR
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          gh workflow run sync-release.yml --repo pgextwin/catalog --ref main \
+            -f extension=plpgsql_check -f release_tag="$RELEASE_TAG"
+
+  catalog_not_configured:
+    name: Flag post-release Catalog dispatch as blocked (not falsely successful)
+    needs: publish
+    if: vars.PGEXTWIN_CATALOG_APP_CLIENT_ID == ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report missing GitHub App configuration
+        run: |
+          echo "::warning::Release may be published, but Catalog sync requires explicit GitHub App installation."
+          echo "CATALOG_SYNC=BLOCKED_APP_CONFIGURATION" >> "$GITHUB_STEP_SUMMARY"
