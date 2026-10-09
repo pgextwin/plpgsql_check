@@ -10,11 +10,15 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$expectedSha = '61776b0af7418d3fd593cccea73178e3d93c9ee1'
-if ($UpstreamRepository -ne 'okbob/plpgsql_check' -or $UpstreamRef -ne 'v2.10.13' -or
-    $UpstreamVersion -ne '2.10.13' -or $PostgreSqlMajor -notin @(15,16,17,18) -or
+$manifest = Get-Content (Join-Path $PSScriptRoot '..\..\config\extension.json') -Raw | ConvertFrom-Json
+$expectedSha = [string]$manifest.upstream.commit
+if ($expectedSha -cnotmatch '^[0-9a-f]{40}$' -or
+    $UpstreamRepository -cne 'okbob/plpgsql_check' -or
+    $UpstreamRef -cne [string]$manifest.upstream.ref -or
+    $UpstreamVersion -cne [string]$manifest.upstream.version -or
+    $PostgreSqlMajor -notin @(15,16,17,18) -or
     $PostgreSqlMinor -notmatch ('^' + $PostgreSqlMajor + '\.')) {
-    throw 'Unexpected upstream identity, PG major, or tested minor in package hook.'
+    throw 'Unexpected upstream SHA/ref/version or tested PostgreSQL minor in package hook.'
 }
 $upstreamSha = (& git -C $UpstreamDir rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $upstreamSha -cne $expectedSha) { throw 'Upstream source SHA changed.' }

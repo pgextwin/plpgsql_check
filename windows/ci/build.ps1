@@ -6,8 +6,13 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Annotated upstream tag v2.10.13 resolves to this COMMIT (not tag-object SHA).
-$expectedSha = '61776b0af7418d3fd593cccea73178e3d93c9ee1'
+# Manifest-pinned SHA identity is an immutable candidate/release build input.
+$manifest = Get-Content (Join-Path $PSScriptRoot '..\..\config\extension.json') -Raw | ConvertFrom-Json
+$expectedSha = [string]$manifest.upstream.commit
+$expectedVersion = [string]$manifest.upstream.version
+if ($expectedSha -cnotmatch '^[0-9a-f]{40}$' -or $manifest.upstream.repository -cne 'okbob/plpgsql_check') {
+    throw 'Missing or malformed pinned upstream identity.'
+}
 $actualSha = (& git -C $UpstreamDir rev-parse HEAD).Trim()
 if ($LASTEXITCODE -ne 0 -or $actualSha -cne $expectedSha) {
     throw "Upstream source identity mismatch; expected $expectedSha, got '$actualSha'."
@@ -30,7 +35,8 @@ $sqlPath = Join-Path $UpstreamDir 'plpgsql_check--2.10.sql'
 if (-not (Test-Path $sqlPath)) { throw 'The control-required SQL install script is missing.' }
 $mesonPath = Join-Path $UpstreamDir 'meson.build'
 $meson = Get-Content $mesonPath -Raw
-if ($meson -notmatch "project\('plpgsql_check',\s*\['c'\],\s*version:\s*'2\.10\.13'\)") {
+$mesonVersionPattern = "project\('plpgsql_check',\s*\['c'\],\s*version:\s*'" + [regex]::Escape($expectedVersion) + "'\)"
+if ($meson -notmatch $mesonVersionPattern) {
     throw 'Upstream Meson project version or structure changed unexpectedly.'
 }
 $magicSource = Get-Content (Join-Path $UpstreamDir 'src\plpgsql_check.c') -Raw
@@ -52,7 +58,13 @@ foreach ($f in $sourceFiles) {
 # The independent list below was audited against the pinned upstream SQL and C
 # sources, not guessed from filenames. It keeps a reviewable export contract.
 $audit = Get-Content (Join-Path $PSScriptRoot '..\..\config\export-audit.json') -Raw | ConvertFrom-Json
-if ($audit.schemaVersion -ne 1 -or $audit.upstreamCommit -cne $expectedSha -or
+# New candidate builds may reuse the audited export contract only if all symbols still match.
+# Formal attested release requires independent export audit explicitly bound to that source SHA.
+$isCandidate = ($env:GITHUB_REF -like 'refs/heads/auto-candidate/*') -or ($env:GITHUB_EVENT_NAME -eq 'pull_request')
+if (-not $isCandidate -and $audit.upstreamCommit -cne $expectedSha) {
+    throw 'A new formal release requires a source-specific independent export audit.'
+}
+if ($audit.schemaVersion -ne 1 -or
     $audit.sqlExtensionVersion -cne '2.10' -or
     $audit.moduleMagicExport -cne 'Pg_magic_func' -or
     $audit.moduleInitializerExport -cne '_PG_init') {
