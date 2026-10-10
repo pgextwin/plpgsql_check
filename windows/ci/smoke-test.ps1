@@ -6,7 +6,7 @@ param(
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-if ($PostgreSqlMajor -notin @(15,16,17,18)) { throw "Unsupported PostgreSQL major: $PostgreSqlMajor" }
+if ($PostgreSqlMajor -notin @(14,15,16,17,18)) { throw "Unsupported PostgreSQL major: $PostgreSqlMajor" }
 $pgVersion = (& (Join-Path $PgRoot 'bin\pg_config.exe') --version).Trim()
 if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch ('^PostgreSQL\s+' + $PostgreSqlMajor + '(?:\.|\s)')) {
     throw "PG root/runner major mismatch: expected $PostgreSqlMajor, found $pgVersion"
