@@ -20,8 +20,8 @@ if ($LASTEXITCODE -ne 0 -or $actualSha -cne $expectedSha) {
 $pgConfig = Join-Path $PgRoot 'bin\pg_config.exe'
 if (-not (Test-Path $pgConfig)) { throw "Missing pg_config: $pgConfig" }
 $pgVersion = (& $pgConfig --version).Trim()
-if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^PostgreSQL\s+(1[5-8])(?:\.|\s)') {
-    throw "Only PG15-18 are approved for this pilot: $pgVersion"
+if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^PostgreSQL\s+(1[4-8])(?:\.|\s)') {
+    throw "Only PG14-18 are approved for this pilot: $pgVersion"
 }
 $pgMajor = [int]$Matches[1]
 
