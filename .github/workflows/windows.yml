@@ -62,3 +62,4 @@ jobs:
         run: |
           python3 tests/test_release_gate.py
           python3 tests/test_promotion_workflow.py
+          python3 tests/test_pg14_backfill.py
