@@ -2,7 +2,7 @@
 
 [日本語](README_ja.md) | **English**
 
-This repository produces **unofficial Windows x64 builds** of [plpgsql_check](https://github.com/okbob/plpgsql_check) for PostgreSQL 15, 16, 17 and 18. It is independent of upstream and of the PostgreSQL project. The first production release is **`v2.10.13-windows.1`**. Release publication is gated by all four Windows build/runtime tests and artifact-attestation verification.
+This repository builds **unofficial Windows x64 binaries** of [plpgsql_check](https://github.com/okbob/plpgsql_check) for maintained PostgreSQL 14, 15, 16, 17 and 18. **The historical first release still contains only PG15–18**; PG14 requires a newly verified release with its own PG14 ZIP. It is independent of upstream and of the PostgreSQL project. The first production release is **`v2.10.13-windows.1`**. Release publication is gated by the full maintained-major Windows build/runtime matrix and artifact-attestation verification.
 
 **Downloads:** [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases) · [v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1). If a release has not yet appeared, the release-branch workflow has not completed; do not substitute normal-CI artifacts for signed release packages.
 
@@ -16,14 +16,14 @@ This repository produces **unofficial Windows x64 builds** of [plpgsql_check](ht
 | Upstream source commit | `61776b0af7418d3fd593cccea73178e3d93c9ee1` |
 | SQL extension `default_version` | `2.10` (not `2.10.13`) |
 | pgextwin Windows release | `v2.10.13-windows.1` |
-| Windows target | x64, PostgreSQL 15–18 only |
+| Windows target | x64, PostgreSQL 14–18 (PG14 until 2026-11-12 EOL; first Release covers PG15–18) |
 | Upstream source license | MIT-style permission text, preserved verbatim in `LICENSE` |
 
-The upstream control file sets `default_version = '2.10'`, and the installation script is `plpgsql_check--2.10.sql`. The packaging release number does **not** change the SQL extension version. PostgreSQL 14 and 19 are not covered.
+The upstream control file sets `default_version = '2.10'`, and the installation script is `plpgsql_check--2.10.sql`. The packaging release number does **not** change the SQL extension version. PostgreSQL 14 is newly enabled for build and runtime validation until its official 2026-11-12 EOL, but is not an asset of `v2.10.13-windows.1`. PostgreSQL 19 is not covered.
 
 ## Download and installation
 
-Select the ZIP for the **exact PostgreSQL major** installed on your Windows x64 machine:
+Select a **published and verified** ZIP for the **exact PostgreSQL major** installed on your Windows x64 machine:
 
 - `plpgsql_check-v2.10.13-pg15-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg16-windows-x64.zip`
