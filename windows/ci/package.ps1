@@ -16,7 +16,7 @@ if ($expectedSha -cnotmatch '^[0-9a-f]{40}$' -or
     $UpstreamRepository -cne 'okbob/plpgsql_check' -or
     $UpstreamRef -cne [string]$manifest.upstream.ref -or
     $UpstreamVersion -cne [string]$manifest.upstream.version -or
-    $PostgreSqlMajor -notin @(15,16,17,18) -or
+    $PostgreSqlMajor -notin @(14,15,16,17,18) -or
     $PostgreSqlMinor -notmatch ('^' + $PostgreSqlMajor + '\.')) {
     throw 'Unexpected upstream SHA/ref/version or tested PostgreSQL minor in package hook.'
 }
