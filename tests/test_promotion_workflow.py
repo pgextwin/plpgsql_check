@@ -10,8 +10,8 @@ WINDOWS = (ROOT / ".github/workflows/windows.yml").read_text(encoding="utf-8")
 
 class PromotionWorkflow(unittest.TestCase):
     def test_checkout_has_complete_main_ancestry(self):
-        # A reviewed candidate and separate approval are merged BEFORE main promotion;
-        # default shallow checkout would always fail the ancestry checks.
+        # Automation-owned candidate must be merged into main BEFORE operator dispatch.
+        # Default shallow checkout would fail the trusted ancestry check.
         authorize = PROMOTION.split("  authorize:",1)[1].split("  release_build:",1)[0]
         self.assertIn("fetch-depth: 0", authorize)
         self.assertIn("persist-credentials: false", authorize)
@@ -24,7 +24,13 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertIn("needs: [authorize, release_build]", PROMOTION)
         self.assertIn("cancel-in-progress: false", PROMOTION)
         self.assertIn("promotion-recovery", PROMOTION)
-        self.assertIn("environment: formal-release", PROMOTION)
+        self.assertNotIn("environment: formal-release", PROMOTION)
+        self.assertIn("confirm_release:", PROMOTION)
+        self.assertIn('--confirm-release "$CONFIRM_RELEASE"', PROMOTION)
+        self.assertIn("Type PUBLISH", PROMOTION)
+        self.assertNotIn("approval_pr:", PROMOTION)
+        self.assertNotIn("--approval-pr", PROMOTION)
+        self.assertNotIn("human-reviewed", PROMOTION)
         self.assertIn("publish-release.py", PROMOTION)
         self.assertNotIn("pull_request_target", PROMOTION)
         self.assertNotIn("--clobber", PROMOTION)
