@@ -15,7 +15,7 @@ class PromotionWorkflow(unittest.TestCase):
         authorize = PROMOTION.split("  authorize:",1)[1].split("  release_build:",1)[0]
         self.assertIn("fetch-depth: 0", authorize)
         self.assertIn("persist-credentials: false", authorize)
-        self.assertIn("promotion-gate.py", authorize)
+        self.assertIn("fleet-promotion-gate.py", authorize)
 
     def test_manual_dispatch_and_scoped_publication(self):
         self.assertIn("workflow_dispatch:", PROMOTION)
@@ -24,6 +24,8 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertIn("needs: [authorize, release_build]", PROMOTION)
         self.assertIn("cancel-in-progress: false", PROMOTION)
         self.assertIn("promotion-recovery", PROMOTION)
+        self.assertIn("--lifecycle .pgextwin-build/metadata/postgresql.json", PROMOTION)
+        self.assertIn("455f0ccc667697f600700a6e64bcfd6c57b6a977", PROMOTION)
         self.assertNotIn("environment: formal-release", PROMOTION)
         self.assertIn("confirm_release:", PROMOTION)
         self.assertIn('--confirm-release "$CONFIRM_RELEASE"', PROMOTION)
@@ -31,7 +33,7 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertNotIn("approval_pr:", PROMOTION)
         self.assertNotIn("--approval-pr", PROMOTION)
         self.assertNotIn("human-reviewed", PROMOTION)
-        self.assertIn("publish-release.py", PROMOTION)
+        self.assertIn("fleet-publish-release.py", PROMOTION)
         self.assertNotIn("pull_request_target", PROMOTION)
         self.assertNotIn("--clobber", PROMOTION)
         self.assertNotIn("gh release delete", PROMOTION)
