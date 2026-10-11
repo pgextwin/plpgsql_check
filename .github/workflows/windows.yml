@@ -36,7 +36,7 @@ jobs:
       contents: read
       actions: read
       issues: write
-    uses: pgextwin/build/.github/workflows/verify-candidate.yml@58a8135bd7aa2335070c863d93795cbb8212c64b
+    uses: pgextwin/build/.github/workflows/verify-candidate.yml@ecf84241c1c4cd99fab3f964cb309f9c6e2a01f8
     with:
       matrix_result: ${{ needs.windows.result }}
 
