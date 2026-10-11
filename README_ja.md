@@ -4,32 +4,32 @@
 
 本リポジトリは[plpgsql_check](https://github.com/okbob/plpgsql_check)の**非公式Windows x64ビルド**を提供するpgextwinプロジェクトです。upstream公式プロジェクトやPostgreSQL本体による公式配布ではありません。
 
-最初の正式Releaseは **`v2.10.13-windows.1`** です。初回ReleaseはPG15〜18の4世代です。以後はPG14〜18のうちコミュニティサポート期間内にある全世代の実機CI・Attestation検証に成功した場合だけ新しいReleaseを公開します。
+最初の正式Releaseは **`v2.10.13-windows.1`**（PG15〜18の4世代）でした。**現在の正式Releaseは`v2.10.14-windows.1`で、PG14〜18の5世代に対応**しています。コミュニティサポート期間内にある全対象世代のWindows実機CI・Attestation検証に合格したものだけを公開します。
 
-**ダウンロード：** [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases)／[v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1)。Releaseがまだ表示されない場合は公開条件を満たしていません。通常CIのArtifactを署名付き正式版として扱わないでください。
+**現在のダウンロード：** [v2.10.14-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.14-windows.1)（PG14〜18）／[全GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases)。[初回のv2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1)はPG15〜18のみです。通常CIのArtifactを署名付き正式版として扱わないでください。
 
 ## バージョンを混同しない
 
 | 区分 | 値 |
 | --- | --- |
 | upstream repository | `okbob/plpgsql_check` |
-| upstream stable release / tag | `2.10.13` / `v2.10.13` |
-| annotated tag object SHA | `72fa03e2bfc78289bdb4ef732024eefb5e707c64` |
-| upstream commit SHA | `61776b0af7418d3fd593cccea73178e3d93c9ee1` |
+| upstream stable release / tag | `2.10.14` / `v2.10.14` |
+| upstream commit SHA | `ccdbcce9de51f01e1138c270aeb9fe4e26c6e911` |
 | SQL extension version | **`2.10`** |
-| pgextwin Release tag | **`v2.10.13-windows.1`** |
-| 対応対象 | Windows x64 / PostgreSQL **14、15、16、17、18**（PG14は2026-11-12まで、初回Releaseは15〜18のみ） |
+| 最新pgextwin Release tag | **`v2.10.14-windows.1`**（PG14〜18） |
+| 対応対象 | Windows x64 / PostgreSQL **14、15、16、17、18**（PG14は2026-11-12まで） |
 
-upstreamの`plpgsql_check.control`は`default_version = '2.10'`で、導入SQLは`plpgsql_check--2.10.sql`です。Release番号に合わせてSQL拡張バージョンを変更しません。**PG14は新たな対応対象ですが、初回Release `v2.10.13-windows.1` には含まれません。** PG14の正式バイナリはPG14の実機テストに合格した後の新Releaseから利用してください。PG14の公式サポートは2026年11月12日で終了し、以後は共通ビルドから自動除外します。PG19は対象外です。
+upstreamの`plpgsql_check.control`は`default_version = '2.10'`で、導入SQLは`plpgsql_check--2.10.sql`です。Release番号に合わせてSQL拡張バージョンを変更しません。**PG14は最新の`v2.10.14-windows.1`に同梱されていますが、初回の`v2.10.13-windows.1`には含まれていません。**PG14の公式サポートは2026年11月12日で終了し、以後は共通ビルドから自動除外します。PG19は対象外です。
 
 ## ZIPの選択・導入
 
 PostgreSQLのメジャーバージョンに合うZIPをReleaseから選びます。
 
-- `plpgsql_check-v2.10.13-pg15-windows-x64.zip`
-- `plpgsql_check-v2.10.13-pg16-windows-x64.zip`
-- `plpgsql_check-v2.10.13-pg17-windows-x64.zip`
-- `plpgsql_check-v2.10.13-pg18-windows-x64.zip`
+- `plpgsql_check-v2.10.14-pg14-windows-x64.zip`
+- `plpgsql_check-v2.10.14-pg15-windows-x64.zip`
+- `plpgsql_check-v2.10.14-pg16-windows-x64.zip`
+- `plpgsql_check-v2.10.14-pg17-windows-x64.zip`
+- `plpgsql_check-v2.10.14-pg18-windows-x64.zip`
 
 ビルドとテストではpgextwin共通CIがChocolatey経由で固定バージョンのWindows版PostgreSQLを導入します。そのため、**すべてのWindows向けPostgreSQLディストリビューションとのABI互換性まで保証するものではありません**。メジャー、x64構成、ビルドと実行環境の互換性を確認し、運用前にはバックアップと事前検証を行ってください。
 
@@ -50,7 +50,7 @@ SELECT extversion FROM pg_extension WHERE extname = 'plpgsql_check';
 
 ## CIで実際に検証している機能
 
-PG15・16・17・18のそれぞれでWindows PostgreSQLサーバーを初期化・起動して`CREATE EXTENSION`を実行し、空テーブルを走査する関数の存在しないrecordフィールドを**関数の実行前に**`plpgsql_check_function_tb`で検出します。フィールド参照の修正後は診断が消えることまで確認します。
+PG14・15・16・17・18のそれぞれでWindows PostgreSQLサーバーを初期化・起動して`CREATE EXTENSION`を実行し、空テーブルを走査する関数の存在しないrecordフィールドを**関数の実行前に**`plpgsql_check_function_tb`で検出します。フィールド参照の修正後は診断が消えることまで確認します。
 
 ~~~sql
 CREATE TABLE public.t (a integer);
@@ -78,7 +78,7 @@ PowerShellでファイルのSHA-256を計算し、`SHA256SUMS.txt`の該当行�
 
 ~~~powershell
 Get-Content .\SHA256SUMS.txt
-(Get-FileHash .\plpgsql_check-v2.10.13-pg17-windows-x64.zip -Algorithm SHA256).Hash
+(Get-FileHash .\plpgsql_check-v2.10.14-pg17-windows-x64.zip -Algorithm SHA256).Hash
 ~~~
 
 各ZIP・各SPDXファイル・各脆弱性レポートについて確認します。Attestationの対象は**最終ZIPのdigest**です。Attestation生成後にZIPを変更しません。
@@ -86,8 +86,8 @@ Get-Content .\SHA256SUMS.txt
 **Build Provenance AttestationとSBOM AttestationはGitHub側に保存されます。Release assetとしての個別ファイルは存在しません。** 認証済みGitHub CLIで以下を実行します。
 
 ~~~powershell
-gh attestation verify .\plpgsql_check-v2.10.13-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml
-gh attestation verify .\plpgsql_check-v2.10.13-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml --predicate-type https://spdx.dev/Document/v2.3
+gh attestation verify .\plpgsql_check-v2.10.14-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml
+gh attestation verify .\plpgsql_check-v2.10.14-pg17-windows-x64.zip --repo pgextwin/plpgsql_check --signer-workflow pgextwin/build/.github/workflows/build-extension-attested.yml --predicate-type https://spdx.dev/Document/v2.3
 ~~~
 
 各majorについて同様に検証できます。呼出元は`pgextwin/plpgsql_check`、署名workflowは`pgextwin/build/.github/workflows/build-extension-attested.yml`で、immutable full-SHAへpinされます。CIでは署名付きSPDX predicateと公開用SPDX JSONの一致も検証します。
@@ -96,8 +96,8 @@ Grypeは**report-only**です。スキャン自体の失敗はCI失敗ですが�
 
 ## GitHub Actionsの権限境界
 
-通常のPR/main CIは`contents: read`の`build-extension.yml`だけを使用します。release branch `release/v2.10.13-windows.1`では、Release/tagの未使用を確認し、4世代のattested buildを完了させ、公開直前に再確認してから共通`release-extension.yml`を呼び出します。Release公開ジョブの権限は`contents: write`のみです。
+通常のPR/main CIは読み取り権限でWindowsビルド・実機機能テストを行います。正式公開は信頼された`main`から人が`promote.yml`の`workflow_dispatch`を起動し、`confirm_release=PUBLISH`を明示入力した場合に限ります。自動生成候補PRのマージ、上流監視・candidate-auditのSHA固定証跡、PG14〜18の署名付きWindowsビルド、ZIP/SBOM/GrypeのSHA256とGitHub Attestationを必須とし、**第三者のPR承認と別の承認JSON PRは不要**です。初回の`v2.10.13-windows.1`は旧方式で4世代を公開した履歴です。
 
-共通Release workflowは既存Releaseのasset上書きに対応しているため、**公開済みReleaseの再実行や重複作成はしないでください**。このリポジトリの重複検出ゲートを迂回しないことが前提です。
+新方式ではReleaseタグを一度だけ予約するため、**公開済み・公開途中のPromotionを再実行したり、Releaseタグや成果物を上書きしたりしないでください**。Draftまで作成されて停止した場合は、既存成果物のハッシュを独立検証してから対象Draftだけを復旧します。
 
 [Step 16技術Pilotの履歴](docs/technical-pilot.md)と[共通Attestation解説](https://github.com/pgextwin/build/blob/main/docs/artifact-attestations.md)も参照してください。
