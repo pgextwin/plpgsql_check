@@ -4,9 +4,9 @@
 
 本リポジトリは[plpgsql_check](https://github.com/okbob/plpgsql_check)の**非公式Windows x64ビルド**を提供するpgextwinプロジェクトです。upstream公式プロジェクトやPostgreSQL本体による公式配布ではありません。
 
-最初の正式Releaseは **`v2.10.13-windows.1`** です。初回ReleaseはPG15〜18の4世代です。以後はPG14〜18のうちコミュニティサポート期間内にある全世代の実機CI・Attestation検証に成功した場合だけ新しいReleaseを公開します。
+最初の正式Releaseは **`v2.10.13-windows.1`**（PG15〜18）です。**現在の公開Releaseは `v2.10.13-windows.2`（PG14〜18）**です。以後はPG14〜18のうちコミュニティサポート期間内にある全世代の実機CI・Attestation検証に成功した場合だけ新しいReleaseを公開します。
 
-**ダウンロード：** [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases)／[v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1)。Releaseがまだ表示されない場合は公開条件を満たしていません。通常CIのArtifactを署名付き正式版として扱わないでください。
+**現在のダウンロード：** [v2.10.13-windows.2](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.2)（PG14〜18）／[GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases)。[初回のv2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1)はPG15〜18のみの過去リリースです。Releaseがまだ表示されない場合は公開条件を満たしていません。通常CIのArtifactを署名付き正式版として扱わないでください。
 
 ## バージョンを混同しない
 
@@ -17,15 +17,16 @@
 | annotated tag object SHA | `72fa03e2bfc78289bdb4ef732024eefb5e707c64` |
 | upstream commit SHA | `61776b0af7418d3fd593cccea73178e3d93c9ee1` |
 | SQL extension version | **`2.10`** |
-| pgextwin Release tag | **`v2.10.13-windows.1`** |
+| 現在のpgextwin Release tag | **`v2.10.13-windows.2`**（PG14〜18） |
 | 対応対象 | Windows x64 / PostgreSQL **14、15、16、17、18**（PG14は2026-11-12まで、初回Releaseは15〜18のみ） |
 
-upstreamの`plpgsql_check.control`は`default_version = '2.10'`で、導入SQLは`plpgsql_check--2.10.sql`です。Release番号に合わせてSQL拡張バージョンを変更しません。**PG14は新たな対応対象ですが、初回Release `v2.10.13-windows.1` には含まれません。** PG14の正式バイナリはPG14の実機テストに合格した後の新Releaseから利用してください。PG14の公式サポートは2026年11月12日で終了し、以後は共通ビルドから自動除外します。PG19は対象外です。
+upstreamの`plpgsql_check.control`は`default_version = '2.10'`で、導入SQLは`plpgsql_check--2.10.sql`です。Release番号に合わせてSQL拡張バージョンを変更しません。**PG14は現行 `v2.10.13-windows.2` に同梱されていますが、初回 `v2.10.13-windows.1` には含まれませんでした。**PG14の公式サポートは2026年11月12日で終了し、以後は共通ビルドから自動除外します。PG19は対象外です。
 
 ## ZIPの選択・導入
 
 PostgreSQLのメジャーバージョンに合うZIPをReleaseから選びます。
 
+- `plpgsql_check-v2.10.13-pg14-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg15-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg16-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg17-windows-x64.zip`
@@ -96,7 +97,7 @@ Grypeは**report-only**です。スキャン自体の失敗はCI失敗ですが�
 
 ## GitHub Actionsの権限境界
 
-通常のPR/main CIは`contents: read`の`build-extension.yml`だけを使用します。release branch `release/v2.10.13-windows.1`では、Release/tagの未使用を確認し、4世代のattested buildを完了させ、公開直前に再確認してから共通`release-extension.yml`を呼び出します。Release公開ジョブの権限は`contents: write`のみです。
+通常のPR/main CIは`contents: read`の`build-extension.yml`だけを使用します。初回リリース時のbranch `release/v2.10.13-windows.1`では、Release/tagの未使用を確認し、4世代のattested buildを完了させ、公開直前に再確認してから共通`release-extension.yml`を呼び出します。Release公開ジョブの権限は`contents: write`のみです。
 
 共通Release workflowは既存Releaseのasset上書きに対応しているため、**公開済みReleaseの再実行や重複作成はしないでください**。このリポジトリの重複検出ゲートを迂回しないことが前提です。
 
