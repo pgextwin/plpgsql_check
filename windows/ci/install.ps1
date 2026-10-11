@@ -13,7 +13,7 @@ foreach ($file in @($control, $sql, $dll)) {
     if (-not (Test-Path $file -PathType Leaf)) { throw "Required installation file missing: $file" }
 }
 $pgVersion = (& (Join-Path $PgRoot 'bin\pg_config.exe') --version).Trim()
-if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^PostgreSQL\s+1[5-8](?:\.|\s)') {
+if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^PostgreSQL\s+1[4-8](?:\.|\s)') {
     throw "Unsupported target installation: $pgVersion"
 }
 $targetExtension = Join-Path $PgRoot 'share\extension'
