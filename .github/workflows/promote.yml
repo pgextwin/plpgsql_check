@@ -49,7 +49,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pgextwin/build
-          ref: 4062a7d9e7023d5cce605c7eed125e1712b23bb8
+          ref: fc0c83f8f2aa32785d0bcd6291f8d3b1c8e40fa3
           path: .pgextwin-build
           persist-credentials: false
       - name: Verify candidate decision/audit and explicit manual release confirmation
@@ -107,7 +107,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pgextwin/build
-          ref: 4062a7d9e7023d5cce605c7eed125e1712b23bb8
+          ref: fc0c83f8f2aa32785d0bcd6291f8d3b1c8e40fa3
           path: .pgextwin-build
           persist-credentials: false
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
