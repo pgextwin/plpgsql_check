@@ -3,9 +3,9 @@
   "name": "plpgsql_check",
   "upstream": {
     "repository": "okbob/plpgsql_check",
-    "ref": "v2.10.13",
-    "version": "2.10.13",
-    "commit": "61776b0af7418d3fd593cccea73178e3d93c9ee1"
+    "ref": "v2.10.14",
+    "version": "2.10.14",
+    "commit": "ccdbcce9de51f01e1138c270aeb9fe4e26c6e911"
   },
   "postgresql": {
     "majors": [
