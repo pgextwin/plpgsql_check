@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Offline regression tests for release-absence gate; never calls real GitHub."""
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -35,13 +36,17 @@ def invoke(repo, ref, http_status):
         return subprocess.run(["bash", str(SCRIPT)], cwd=ROOT, env=env, capture_output=True, text=True)
 
 def main():
-    assert invoke("nottrusted/ext", "refs/heads/release/v2.10.13-windows.2", 404).returncode != 0
+    configured = json.loads((ROOT / "config" / "extension.json").read_text(encoding="utf-8"))["upstream"]["version"]
+    valid = f"refs/heads/release/v{configured}-windows.2"
+    other = "0.0.1" if configured == "0.0.0" else "0.0.0"
+    mismatched = f"refs/heads/release/v{other}-windows.2"
+    assert invoke("nottrusted/ext", valid, 404).returncode != 0
     assert invoke("pgextwin/plpgsql_check", "refs/heads/feature/new", 404).returncode != 0
-    assert invoke("pgextwin/plpgsql_check", "refs/heads/release/v2.10.14-windows.2", 404).returncode != 0
-    assert invoke("pgextwin/plpgsql_check", "refs/heads/release/v2.10.13-windows.2", 200).returncode != 0
-    assert invoke("pgextwin/plpgsql_check", "refs/heads/release/v2.10.13-windows.2", 503).returncode != 0
-    assert invoke("pgextwin/plpgsql_check", "refs/heads/release/v2.10.13-windows.2", 404).returncode == 0
-    assert invoke("pgextwin/plpgsql_check", "refs/heads/release/v2.10.13-windows.0", 404).returncode != 0
+    assert invoke("pgextwin/plpgsql_check", mismatched, 404).returncode != 0
+    assert invoke("pgextwin/plpgsql_check", valid, 200).returncode != 0
+    assert invoke("pgextwin/plpgsql_check", valid, 503).returncode != 0
+    assert invoke("pgextwin/plpgsql_check", valid, 404).returncode == 0
+    assert invoke("pgextwin/plpgsql_check", valid.replace("-windows.2", "-windows.0"), 404).returncode != 0
     print("Step 19 release gate fixture tests passed")
 
 if __name__ == "__main__":
