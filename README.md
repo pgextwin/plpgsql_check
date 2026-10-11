@@ -2,9 +2,9 @@
 
 [日本語](README_ja.md) | **English**
 
-This repository builds **unofficial Windows x64 binaries** of [plpgsql_check](https://github.com/okbob/plpgsql_check) for maintained PostgreSQL 14, 15, 16, 17 and 18. **The historical first release still contains only PG15–18**; PG14 requires a newly verified release with its own PG14 ZIP. It is independent of upstream and of the PostgreSQL project. The first production release is **`v2.10.13-windows.1`**. Release publication is gated by the full maintained-major Windows build/runtime matrix and artifact-attestation verification.
+This repository builds **unofficial Windows x64 binaries** of [plpgsql_check](https://github.com/okbob/plpgsql_check) for maintained PostgreSQL 14, 15, 16, 17 and 18. **The historical first release contained only PG15–18; the current verified release covers PG14–18.** It is independent of upstream and of the PostgreSQL project. The first production release is **`v2.10.13-windows.1`**. Release publication is gated by the full maintained-major Windows build/runtime matrix and artifact-attestation verification.
 
-**Downloads:** [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases) · [v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1). If a release has not yet appeared, the release-branch workflow has not completed; do not substitute normal-CI artifacts for signed release packages.
+**Current download:** [v2.10.13-windows.2](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.2) (PG14–18) · [GitHub Releases](https://github.com/pgextwin/plpgsql_check/releases). Historical first release: [v2.10.13-windows.1](https://github.com/pgextwin/plpgsql_check/releases/tag/v2.10.13-windows.1) (PG15–18). If a release has not yet appeared, the release-branch workflow has not completed; do not substitute normal-CI artifacts for signed release packages.
 
 ## Exact version identity
 
@@ -15,16 +15,17 @@ This repository builds **unofficial Windows x64 binaries** of [plpgsql_check](ht
 | Upstream annotated tag object | `72fa03e2bfc78289bdb4ef732024eefb5e707c64` |
 | Upstream source commit | `61776b0af7418d3fd593cccea73178e3d93c9ee1` |
 | SQL extension `default_version` | `2.10` (not `2.10.13`) |
-| pgextwin Windows release | `v2.10.13-windows.1` |
+| Current pgextwin Windows release | `v2.10.13-windows.2` (PG14–18) |
 | Windows target | x64, PostgreSQL 14–18 (PG14 until 2026-11-12 EOL; first Release covers PG15–18) |
 | Upstream source license | MIT-style permission text, preserved verbatim in `LICENSE` |
 
-The upstream control file sets `default_version = '2.10'`, and the installation script is `plpgsql_check--2.10.sql`. The packaging release number does **not** change the SQL extension version. PostgreSQL 14 is newly enabled for build and runtime validation until its official 2026-11-12 EOL, but is not an asset of `v2.10.13-windows.1`. PostgreSQL 19 is not covered.
+The upstream control file sets `default_version = '2.10'`, and the installation script is `plpgsql_check--2.10.sql`. The packaging release number does **not** change the SQL extension version. PostgreSQL 14 is included in the current `v2.10.13-windows.2` Release, but was not included in the historical first `v2.10.13-windows.1` Release; PG14 remains eligible for new builds through its official 2026-11-12 EOL. PostgreSQL 19 is not covered.
 
 ## Download and installation
 
 Select a **published and verified** ZIP for the **exact PostgreSQL major** installed on your Windows x64 machine:
 
+- `plpgsql_check-v2.10.13-pg14-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg15-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg16-windows-x64.zip`
 - `plpgsql_check-v2.10.13-pg17-windows-x64.zip`
@@ -87,6 +88,6 @@ Repeat per PostgreSQL major. The release CI verifies both attestation types and 
 
 ## Build and release safety
 
-Regular PR/main CI uses the read-only `build-extension.yml` workflow. A `release/v2.10.13-windows.1` branch first checks that **neither the Release nor tag exists**, builds all four majors using `build-extension-attested.yml`, rechecks Release/tag absence, then calls `release-extension.yml` to publish. The standalone common release workflow supports clobbering on reuse; **do not manually rerun a published release**, and do not bypass this repository's duplicate-release gates. The complete matrix must succeed before publication.
+Regular PR/main CI uses the read-only `build-extension.yml` workflow. The historical first-Release branch `release/v2.10.13-windows.1` checked that **neither the Release nor tag exists**, builds all four majors using `build-extension-attested.yml`, rechecks Release/tag absence, then calls `release-extension.yml` to publish. The standalone common release workflow supports clobbering on reuse; **do not manually rerun a published release**, and do not bypass this repository's duplicate-release gates. The complete matrix must succeed before publication.
 
 See [historical Step 16 pilot notes](docs/technical-pilot.md) and the [shared supply-chain docs](https://github.com/pgextwin/build/blob/main/docs/artifact-attestations.md). A successful normal CI artifact is **not** a signed production release.
