@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "upstreamCommit": "61776b0af7418d3fd593cccea73178e3d93c9ee1",
+  "upstreamCommit": "ccdbcce9de51f01e1138c270aeb9fe4e26c6e911",
   "sqlExtensionVersion": "2.10",
   "moduleMagicExport": "Pg_magic_func",
   "moduleInitializerExport": "_PG_init",
