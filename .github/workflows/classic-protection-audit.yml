@@ -173,7 +173,31 @@ jobs:
               elif composite is not None and isinstance(exc, composite.graphql.GraphqlBypassDenied):
                   reason = "GRAPHQL_PROOF_DENIED"
               elif composite is not None and isinstance(exc, composite.rest.ProtectionDenied):
-                  reason = "REST_POLICY_DENIED"
+                  # Fixed labels from the reviewed, pinned REST verifier only.
+                  # Never emit original exception text, field values, or actors.
+                  rest_reasons = {
+                      "branch is unprotected, stale or not main": "MAIN_SHA_OR_PROTECTION",
+                      "Classic protection detail is missing": "CLASSIC_DETAIL_MISSING",
+                      "required up-to-date status checks (strict) are missing": "STRICT_CHECKS_MISSING",
+                      "required status contexts are missing, duplicated or unexpected": "CHECK_CONTEXTS_MISMATCH",
+                      "App-bound required status checks are incomplete": "CHECK_APPS_INCOMPLETE",
+                      "required check has a wrong name, duplicate, or untrusted App": "CHECK_APP_UNTRUSTED",
+                      "App-bound check list differs from expected Classic policy": "CHECK_APPS_MISMATCH",
+                      "required checks not enforced on everyone": "CHECKS_ENFORCEMENT_UNKNOWN",
+                      "PR requirement / zero approving reviews not proven": "PR_ZERO_APPROVALS_UNPROVEN",
+                      "PR bypass actor status absent or nonempty": "REST_BYPASS_PROOF_DENIED",
+                      "invalid or missing Classic protection enforce_admins": "ADMIN_ENFORCEMENT_UNPROVEN",
+                      "invalid or missing Classic protection allow_force_pushes": "FORCE_PUSH_PROHIBITION_UNPROVEN",
+                      "invalid or missing Classic protection allow_deletions": "DELETION_PROHIBITION_UNPROVEN",
+                      "push actor restrictions are unknown": "PUSH_RESTRICTIONS_ABSENT",
+                      "push actor restrictions differ from audited policy": "PUSH_RESTRICTIONS_UNPROVEN",
+                      "branch summary does not prove required checks for everyone": "BRANCH_SUMMARY_ENFORCEMENT_UNKNOWN",
+                      "branch summary disagrees on App-bound checks": "BRANCH_SUMMARY_CHECKS_MISMATCH",
+                      "duplicate field in authenticated GitHub response": "DUPLICATE_JSON_FIELD",
+                      "invalid or ambiguous GitHub JSON response": "INVALID_JSON",
+                      "GitHub protection evidence is not an object": "RESPONSE_NOT_OBJECT",
+                  }
+                  reason = rest_reasons.get(str(exc), "REST_POLICY_DENIED")
               elif composite is not None and isinstance(exc, composite.CompositeDenied):
                   reason = "COMPOSITE_PROOF_DENIED"
               elif stage == "SCOPE_VALIDATE":
