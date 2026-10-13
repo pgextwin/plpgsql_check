@@ -21,7 +21,7 @@ def verify(text):
         'EXPECTED_CLIENT_ID" != "Iv23lidY1vsm7ZseyKe2"',
         'EXPECTED_INSTALLATION_ID" != "170837728"',
         "repository: pgextwin/build",
-        "ref: 6b2aaa08748ad89563f628ea214321f564a0d19a",
+        "ref: 657a9e3c28d6cdbff16ef54e3bad4fe61c4fa8f7",
         "persist-credentials: false",
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
         "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349",
@@ -84,11 +84,30 @@ def verify(text):
         'return kind.upper() + "_NONEMPTY"',
         'return "ALL_THREE_EXPLICITLY_EMPTY"',
         'print("DIAGNOSTIC: rest_bypass_shape=" + classify_rest_bypass(value))',
+        'query = """query {',
+        'ref(qualifiedName: "refs/heads/main")',
+        'bypassPullRequestAllowances(first: 1)',
+        'method="POST",',
+        'data=json.dumps({"query": query}',
+        'trusted-build/scripts/classic-graphql-bypass.py',
+        'validate_effective_ref_bypass_zero(',
+        'expected_main_sha=os.environ["GITHUB_SHA"]',
+        'print("PASS: GraphQL effective refs/heads/main bypass count exactly zero; publishableReceipt=false")',
+        'reason = gql_reasons.get(str(exc), "GRAPHQL_CONTRACT_DENIED")',
         'reason = policy_codes.get(str(exc), "CLASSIC_CONTRACT_DENIED")',
         'print("DENY: stage=" + stage[0] + "; reason=" + reason + "; publishableReceipt=false")',
     ):
         if term not in text:
             raise ValueError("fixed, sanitized fail-closed diagnostics missing")
+    # A GraphQL POST must be an immutable read-only query, not a mutation.
+    if 'mutation {' in text or 'mutation(' in text or '/graphql/mutation' in text:
+        raise ValueError("GraphQL mutation forbidden")
+    if text.count('"https://api.github.com/graphql"') != 1:
+        raise ValueError("unexpected or missing GraphQL endpoint")
+    if 'gql_proof.get("publishableReceipt") is not False' not in text:
+        raise ValueError("GraphQL proof cannot authorize publishing")
+    if 'module.collect_verified_classic(' not in text:
+        raise ValueError("REST Classic verifier has been bypassed")
     if 'print(exc)' in text or 'print(str(exc))' in text or 'traceback.print_exc' in text:
         raise ValueError("untrusted exception could leak sensitive contents")
     if "AUDIT_TOKEN: ${{ steps.auditor.outputs.token }}" not in text:
