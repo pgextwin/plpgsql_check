@@ -2,6 +2,7 @@ name: Issue 75 Classic protection authenticated read-only proof
 
 # This is a one-time nonpublishing proof, NOT an authorization or Dispatch API.
 # PR code never receives secrets: credentials are minted on protected main only.
+# Secret-rotation retry 2026-10-13: fresh protected-main proof; no policy or permission change.
 on:
   push:
     branches:
