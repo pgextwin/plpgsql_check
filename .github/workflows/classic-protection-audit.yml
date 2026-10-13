@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pgextwin/build
-          ref: bfb1804fbd1ddb424c998aa98095a9894696d7a5
+          ref: b63f9c9cbe66748fe10707961fd31a236664f8ca
           path: trusted-build
           fetch-depth: 1
           persist-credentials: false
@@ -157,12 +157,15 @@ jobs:
               if (proof.get("status") != "VERIFIED_CLASSIC_COMPOSITE_READ_ONLY"
                       or proof.get("snapshotCount") != 2
                       or proof.get("bypassEvidence") != "GRAPHQL_ZERO_FOR_REST_OMISSION"
+                      or proof.get("pushEvidence") != "GRAPHQL_UNRESTRICTED_FOR_REST_OMISSION"
                       or proof.get("independentEffectiveRefZero") is not True
+                      or proof.get("independentPushUnrestricted") is not True
                       or proof.get("mainSha") != os.environ["GITHUB_SHA"]
                       or proof.get("publishableReceipt") is not False):
                   raise ValueError("nonpublishing composite receipt mismatch")
               print("PASS: REST Classic and GraphQL effective-main zero each verified twice")
               print("PASS: REST bypass omission independently covered by same-token GraphQL")
+              print("PASS: REST push restrictions omission independently covered by GraphQL false/zero")
               print("PASS: required checks, strict, PR, 0 approvals, admins, no force/delete")
               print("PASS: mainSha=" + os.environ["GITHUB_SHA"] + "; publishableReceipt=false")
           except Exception as exc:
