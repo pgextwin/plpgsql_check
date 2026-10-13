@@ -106,6 +106,10 @@ def verify(text):
         raise ValueError("unexpected or missing GraphQL endpoint")
     if 'gql_proof.get("publishableReceipt") is not False' not in text:
         raise ValueError("GraphQL proof cannot authorize publishing")
+    # Both independent read paths MUST bind the exact current protected-main SHA;
+    # mutating even one must be caught by the hostile workflow fixture.
+    if text.count('expected_main_sha=os.environ["GITHUB_SHA"]') != 2:
+        raise ValueError("both live GraphQL and REST SHA bindings are required")
     if 'module.collect_verified_classic(' not in text:
         raise ValueError("REST Classic verifier has been bypassed")
     if 'print(exc)' in text or 'print(str(exc))' in text or 'traceback.print_exc' in text:
