@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pgextwin/build
-          ref: 6b2aaa08748ad89563f628ea214321f564a0d19a
+          ref: 657a9e3c28d6cdbff16ef54e3bad4fe61c4fa8f7
           path: trusted-build
           fetch-depth: 1
           persist-credentials: false
@@ -101,6 +101,7 @@ jobs:
           # headers, URLs with credentials, or untrusted response fields.
           stage = ["SCOPE_GET"]
           module = None
+          graphql_mod = None
           policy_codes = {
               "duplicate field in authenticated GitHub response": "DUPLICATE_JSON_FIELD",
               "invalid or ambiguous GitHub JSON response": "INVALID_JSON",
@@ -221,6 +222,69 @@ jobs:
                       stage[0] = part + "_RETURNED_" + str((self.calls + 1) // 2)
                       return value
 
+              # Independent, read-only GraphQL QUERY. GitHub's GraphQL endpoint
+              # accepts HTTP POST for queries; there is NO mutation and no
+              # Release, tag, workflow or branch settings API call.
+              stage[0] = "GRAPHQL_QUERY"
+              query = """query {
+                repository(owner: "pgextwin", name: "plpgsql_check") {
+                  nameWithOwner
+                  ref(qualifiedName: "refs/heads/main") {
+                    name
+                    prefix
+                    target { oid }
+                    branchProtectionRule {
+                      id
+                      bypassPullRequestAllowances(first: 1) {
+                        totalCount
+                        nodes { id }
+                        pageInfo { hasNextPage }
+                      }
+                    }
+                  }
+                }
+              }"""
+              gql_request = Request(
+                  "https://api.github.com/graphql",
+                  data=json.dumps({"query": query}, separators=(",", ":")).encode("utf-8"),
+                  headers={
+                      "Authorization": "Bearer " + token,
+                      "Accept": "application/vnd.github+json",
+                      "Content-Type": "application/json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+                  method="POST",
+              )
+              with urlopen(gql_request, timeout=20) as response:
+                  if response.status != 200:
+                      raise ValueError("GraphQL evidence was not HTTP 200")
+                  gql_bytes = response.read(131073)
+              if len(gql_bytes) > 131072:
+                  raise ValueError("oversized GraphQL response")
+              print("PASS: read-only GraphQL QUERY returned HTTP 200 (no body logged)")
+              stage[0] = "GRAPHQL_VALIDATE"
+              gql_spec = importlib.util.spec_from_file_location(
+                  "classic_graphql_bypass",
+                  "trusted-build/scripts/classic-graphql-bypass.py",
+              )
+              if gql_spec is None or gql_spec.loader is None:
+                  raise ValueError("trusted GraphQL validator missing")
+              graphql_mod = importlib.util.module_from_spec(gql_spec)
+              gql_spec.loader.exec_module(graphql_mod)
+              gql_value = json.loads(gql_bytes.decode("utf-8"), object_pairs_hook=unique_object)
+              gql_proof = graphql_mod.validate_effective_ref_bypass_zero(
+                  gql_value,
+                  expected_main_sha=os.environ["GITHUB_SHA"],
+              )
+              if (gql_proof.get("status") != "VERIFIED_EFFECTIVE_REF_BYPASS_ZERO"
+                      or gql_proof.get("publishableReceipt") is not False
+                      or gql_proof.get("mainSha") != os.environ["GITHUB_SHA"]):
+                  raise ValueError("incomplete GraphQL effective main proof")
+              print("PASS: GraphQL effective refs/heads/main bypass count exactly zero; publishableReceipt=false")
+
+              # The original GET-only Classic verifier STILL fails closed on
+              # omitted REST bypass arrays. Live GraphQL proof is independent
+              # evidence, not automatic permission to weaken that contract.
               stage[0] = "CLASSIC_AUDIT"
               proof = module.collect_verified_classic(
                   StageReader(token),
@@ -243,6 +307,21 @@ jobs:
                   reason = "HTTP_" + str(exc.code) if exc.code in (
                       400, 401, 403, 404, 409, 422, 429, 500, 502, 503, 504
                   ) else "HTTP_UNEXPECTED"
+              elif graphql_mod is not None and isinstance(exc, graphql_mod.GraphqlBypassDenied):
+                  gql_reasons = {
+                      "expected main SHA invalid": "GRAPHQL_INVALID_SHA",
+                      "GraphQL errors or invalid root": "GRAPHQL_ERRORS_OR_ROOT",
+                      "GraphQL data unavailable": "GRAPHQL_MISSING_DATA",
+                      "GraphQL repository identity mismatch": "GRAPHQL_WRONG_REPO",
+                      "GraphQL effective main Ref unavailable": "GRAPHQL_MAIN_REF_UNKNOWN",
+                      "GraphQL Ref target stale or incorrect": "GRAPHQL_MAIN_SHA_MISMATCH",
+                      "effective Classic branch rule not visible": "GRAPHQL_EFFECTIVE_RULE_UNKNOWN",
+                      "GraphQL bypass connection missing": "GRAPHQL_BYPASS_CONNECTION_MISSING",
+                      "GraphQL bypass allowances nonzero or ambiguous": "GRAPHQL_BYPASS_NONZERO_OR_UNKNOWN",
+                      "GraphQL bypass nodes ambiguous": "GRAPHQL_BYPASS_NODES_UNKNOWN",
+                      "GraphQL bypass page is incomplete": "GRAPHQL_BYPASS_PAGE_INCOMPLETE",
+                  }
+                  reason = gql_reasons.get(str(exc), "GRAPHQL_CONTRACT_DENIED")
               elif module is not None and isinstance(exc, module.ProtectionDenied):
                   reason = policy_codes.get(str(exc), "CLASSIC_CONTRACT_DENIED")
                   http = re.fullmatch(r"Classic GitHub API returned HTTP (\d{3})", str(exc))
