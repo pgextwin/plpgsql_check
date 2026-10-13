@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
-"""Offline contract guard for Issue #75 main-only, nonpublishing Classic read proof.
-
-This checks the trust boundary; it deliberately does not load secrets or issue requests.
-"""
+"""Offline hostile-mutation guard for #75 nonpublishing main-only composite proof."""
 from pathlib import Path
 import re
 
 WORKFLOW = Path(".github/workflows/classic-protection-audit.yml")
-
 
 def verify(text):
     required = (
@@ -21,7 +17,7 @@ def verify(text):
         'EXPECTED_CLIENT_ID" != "Iv23lidY1vsm7ZseyKe2"',
         'EXPECTED_INSTALLATION_ID" != "170837728"',
         "repository: pgextwin/build",
-        "ref: 657a9e3c28d6cdbff16ef54e3bad4fe61c4fa8f7",
+        "ref: bfb1804fbd1ddb424c998aa98095a9894696d7a5",
         "persist-credentials: false",
         "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
         "actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349",
@@ -35,87 +31,53 @@ def verify(text):
         "https://api.github.com/installation/repositories?per_page=100",
         'scope["total_count"] != 1',
         'scope["repositories"][0].get("full_name") != "pgextwin/plpgsql_check"',
-        "trusted-build/scripts/classic-protection-audit.py",
-        "collect_verified_classic(",
+        'AUDIT_TOKEN: ${{ steps.auditor.outputs.token }}',
+        "trusted-build/scripts/classic-composite-protection.py",
+        "composite.collect_verified_composite(",
+        "composite.CompositeReader(token)",
         'expected_main_sha=os.environ["GITHUB_SHA"]',
+        'proof.get("status") != "VERIFIED_CLASSIC_COMPOSITE_READ_ONLY"',
+        'proof.get("snapshotCount") != 2',
+        'proof.get("bypassEvidence") != "GRAPHQL_ZERO_FOR_REST_OMISSION"',
+        'proof.get("independentEffectiveRefZero") is not True',
+        'proof.get("mainSha") != os.environ["GITHUB_SHA"]',
         'proof.get("publishableReceipt") is not False',
-        "print(\"DENY: authenticated Classic API proof incomplete or unavailable\")",
+        'print("DENY: stage=" + stage + "; reason=" + reason + "; publishableReceipt=false")',
+        "raise SystemExit(1)",
+        "DRY_RUN_CONTEXT_ONLY; no Release, tag, Dispatch, or publication authorization",
     )
     for term in required:
         if term not in text:
-            raise ValueError("required isolated-auditor contract element missing")
-    # This workflow has NO PR, Dispatch, schedule or workflow-call entrypoint.
-    for forbidden in ("\n  pull_request:", "\n  workflow_dispatch:", "\n  schedule:",
-                      "\n  workflow_call:", "upload-artifact", "gh release ",
-                      "gh workflow run ", "permission-administration: write"):
+            raise ValueError("isolated composite main-only proof contract missing")
+    for forbidden in (
+        "\n  pull_request:", "\n  workflow_dispatch:", "\n  schedule:",
+        "\n  workflow_call:", "upload-artifact", "gh release ",
+        "gh workflow run ", "permission-administration: write",
+        'print(exc)', 'print(str(exc))', 'traceback.print_exc',
+        'mutation {', 'mutation(', 'github.event_name == \'pull_request\'',
+    ):
         if forbidden in text:
-            raise ValueError("unsafe trigger, publishing action or permission")
+            raise ValueError("unauthorized trigger, write or possible leak")
     if not re.search(r"(?m)^permissions:\n  contents: read$", text):
-        raise ValueError("default GitHub token is not read-only")
+        raise ValueError("default token permissions not read-only")
     if not re.search(r"(?m)^    permissions:\n      contents: read$", text):
-        raise ValueError("job GitHub token is not read-only")
+        raise ValueError("job token permissions not read-only")
     ordered = (
         "Deny unexpected identity, event or missing App variables",
         "Checkout reviewed audit code",
         "Mint single-repo Administration read-only installation token",
         "Deny a different App installation",
-        "Verify exact token repository scope and two live Classic API snapshots",
+        "Verify one-repo scope and two full same-token REST GraphQL snapshots",
     )
     locations = [text.find(x) for x in ordered]
-    if any(i < 0 for i in locations) or locations != sorted(locations):
-        raise ValueError("secret minting occurs before trusted event guard")
-    if "raise SystemExit(1)" not in text or "except Exception as exc:" not in text:
-        raise ValueError("API errors may not fail closed")
-    # A fail-closed diagnostic has an exclusively fixed code vocabulary; it
-    # must not echo the underlying token, raw API body, or exception string.
-    for term in (
-        'stage = ["SCOPE_GET"]',
-        "policy_codes = {",
-        'stage[0] = "SCOPE_VALIDATE"',
-        'stage[0] = "PINNED_READER_LOAD"',
-        "class StageReader:",
-        'stage[0] = "FINAL_RECEIPT_DENY_CHECK"',
-        "def classify_rest_bypass(details):",
-        'return "BYPASS_ABSENT"',
-        'return "BYPASS_NULL"',
-        'return "BYPASS_NOT_OBJECT"',
-        'return kind.upper() + "_ABSENT"',
-        'return kind.upper() + "_NOT_LIST"',
-        'return kind.upper() + "_NONEMPTY"',
-        'return "ALL_THREE_EXPLICITLY_EMPTY"',
-        'print("DIAGNOSTIC: rest_bypass_shape=" + classify_rest_bypass(value))',
-        'query = """query {',
-        'ref(qualifiedName: "refs/heads/main")',
-        'bypassPullRequestAllowances(first: 1)',
-        'method="POST",',
-        'data=json.dumps({"query": query}',
-        'trusted-build/scripts/classic-graphql-bypass.py',
-        'validate_effective_ref_bypass_zero(',
-        'expected_main_sha=os.environ["GITHUB_SHA"]',
-        'print("PASS: GraphQL effective refs/heads/main bypass count exactly zero; publishableReceipt=false")',
-        'reason = gql_reasons.get(str(exc), "GRAPHQL_CONTRACT_DENIED")',
-        'reason = policy_codes.get(str(exc), "CLASSIC_CONTRACT_DENIED")',
-        'print("DENY: stage=" + stage[0] + "; reason=" + reason + "; publishableReceipt=false")',
-    ):
-        if term not in text:
-            raise ValueError("fixed, sanitized fail-closed diagnostics missing")
-    # A GraphQL POST must be an immutable read-only query, not a mutation.
-    if 'mutation {' in text or 'mutation(' in text or '/graphql/mutation' in text:
-        raise ValueError("GraphQL mutation forbidden")
-    if text.count('"https://api.github.com/graphql"') != 1:
-        raise ValueError("unexpected or missing GraphQL endpoint")
-    if 'gql_proof.get("publishableReceipt") is not False' not in text:
-        raise ValueError("GraphQL proof cannot authorize publishing")
-    # Both independent read paths MUST bind the exact current protected-main SHA;
-    # mutating even one must be caught by the hostile workflow fixture.
-    if text.count('expected_main_sha=os.environ["GITHUB_SHA"]') != 2:
-        raise ValueError("both live GraphQL and REST SHA bindings are required")
-    if 'module.collect_verified_classic(' not in text:
-        raise ValueError("REST Classic verifier has been bypassed")
-    if 'print(exc)' in text or 'print(str(exc))' in text or 'traceback.print_exc' in text:
-        raise ValueError("untrusted exception could leak sensitive contents")
-    if "AUDIT_TOKEN: ${{ steps.auditor.outputs.token }}" not in text:
-        raise ValueError("scoped token is not isolated to the audit reader")
+    if any(x < 0 for x in locations) or locations != sorted(locations):
+        raise ValueError("credential used before protected-main guard")
+    if text.count('expected_main_sha=os.environ["GITHUB_SHA"]') != 1:
+        raise ValueError("composite must bind exact current main SHA once")
+    if "except Exception as exc:" not in text:
+        raise ValueError("no exception denial")
+    if text.count("composite.collect_verified_composite(") != 1:
+        raise ValueError("unexpected composite collector count")
 
 
 def main():
@@ -126,19 +88,27 @@ def main():
         ("permission-administration: read", "permission-administration: write"),
         ("repositories: plpgsql_check", "repositories: catalog"),
         ("github.ref == 'refs/heads/main'", "github.ref != 'refs/heads/main'"),
-        ("PROBE_ATTEMPT\" != \"1\"", "PROBE_ATTEMPT\" != \"99\""),
-        ("publishableReceipt\") is not False", "publishableReceipt\") is False"),
-        ("expected_main_sha=os.environ[\"GITHUB_SHA\"]", "expected_main_sha='0' * 40"),
+        ('PROBE_ATTEMPT" != "1"', 'PROBE_ATTEMPT" != "99"'),
+        ('proof.get("publishableReceipt") is not False',
+         'proof.get("publishableReceipt") is False'),
+        ('proof.get("bypassEvidence") != "GRAPHQL_ZERO_FOR_REST_OMISSION"',
+         'proof.get("bypassEvidence") == "GRAPHQL_ZERO_FOR_REST_OMISSION"'),
+        ('proof.get("snapshotCount") != 2', 'proof.get("snapshotCount") != 1'),
+        ('expected_main_sha=os.environ["GITHUB_SHA"]',
+         'expected_main_sha="0" * 40'),
+        ("composite.CompositeReader(token)", "composite.CompositeReader('other-token')"),
+        ("ref: bfb1804fbd1ddb424c998aa98095a9894696d7a5", "ref: main"),
     )
-    for before, after in mutations:
+    for i, (before, after) in enumerate(mutations):
         if before not in text:
-            raise AssertionError("fixture mutation does not match source")
+            raise AssertionError(f"test mutation fixture missing {i}")
         try:
             verify(text.replace(before, after, 1))
         except ValueError:
             continue
-        raise AssertionError("hostile workflow mutation was not denied")
-    print("PASS: nonpublishing trusted-main App read-only workflow contract and 7 denial mutations")
+        raise AssertionError(f"hostile mutation {i} not DENIED")
+    print("PASS: main-only nonpublishing composite proof +", len(mutations),
+          "adversarial workflow mutations")
 
 
 if __name__ == "__main__":
