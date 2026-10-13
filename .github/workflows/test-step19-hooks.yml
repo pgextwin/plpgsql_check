@@ -27,3 +27,5 @@ jobs:
           Write-Host 'All Windows PowerShell hooks parsed successfully.'
       - name: Deny unsafe changes to main-only Classic protection audit (#75)
         run: python3 tests/test_classic_protection_audit_workflow.py
+      - name: Deny unsafe Phase D real GitHub expected-denial workflow changes (#75)
+        run: python3 tests/test_phase_d_live_deny_workflow.py
