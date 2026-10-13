@@ -52,7 +52,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: pgextwin/build
-          ref: 657a9e3c28d6cdbff16ef54e3bad4fe61c4fa8f7
+          ref: bfb1804fbd1ddb424c998aa98095a9894696d7a5
           path: trusted-build
           fetch-depth: 1
           persist-credentials: false
@@ -83,7 +83,7 @@ jobs:
           fi
           echo "Installation identity PASS (no credential values emitted)"
 
-      - name: Verify exact token repository scope and two live Classic API snapshots
+      - name: Verify one-repo scope and two full same-token REST GraphQL snapshots
         shell: bash
         env:
           AUDIT_TOKEN: ${{ steps.auditor.outputs.token }}
@@ -93,49 +93,17 @@ jobs:
           import importlib.util
           import json
           import os
-          import re
           from urllib.error import HTTPError
           from urllib.request import Request, urlopen
 
-          # A bounded vocabulary only: NEVER output exceptions, tokens, API bodies,
-          # headers, URLs with credentials, or untrusted response fields.
-          stage = ["SCOPE_GET"]
-          module = None
-          graphql_mod = None
-          policy_codes = {
-              "duplicate field in authenticated GitHub response": "DUPLICATE_JSON_FIELD",
-              "invalid or ambiguous GitHub JSON response": "INVALID_JSON",
-              "GitHub protection evidence is not an object": "NOT_JSON_OBJECT",
-              "GitHub evidence read was not HTTP 200": "API_NOT_200",
-              "paginated GitHub evidence cannot prove a complete state": "PAGINATED_API",
-              "oversized GitHub evidence": "OVERSIZED_RESPONSE",
-              "Classic GitHub API unavailable": "API_UNAVAILABLE",
-              "expected main SHA is not a full hexadecimal object ID": "INVALID_EXPECTED_SHA",
-              "branch is unprotected, stale or not main": "MAIN_SHA_OR_PROTECTION_MISMATCH",
-              "Classic protection detail is missing": "CLASSIC_DETAIL_MISSING",
-              "required up-to-date status checks (strict) are missing": "STRICT_CHECKS_MISSING",
-              "required status contexts are missing, duplicated or unexpected": "CHECK_CONTEXTS_MISMATCH",
-              "App-bound required status checks are incomplete": "CHECK_APPS_INCOMPLETE",
-              "required check has a wrong name, duplicate, or untrusted App": "CHECK_APP_UNTRUSTED",
-              "App-bound check list differs from expected Classic policy": "CHECK_APPS_MISMATCH",
-              "required checks not enforced on everyone": "REQUIRED_CHECKS_NOT_ENFORCED",
-              "PR requirement / zero approving reviews not proven": "PR_ZERO_APPROVALS_UNPROVEN",
-              "PR bypass actor status absent or nonempty": "PR_BYPASS_UNKNOWN_OR_PRESENT",
-              "invalid or missing Classic protection enforce_admins": "ADMIN_ENFORCEMENT_UNPROVEN",
-              "invalid or missing Classic protection allow_force_pushes": "FORCE_PUSH_PROHIBITION_UNPROVEN",
-              "invalid or missing Classic protection allow_deletions": "DELETION_PROHIBITION_UNPROVEN",
-              "push actor restrictions are unknown": "PUSH_RESTRICTIONS_UNKNOWN",
-              "push actor restrictions differ from audited policy": "PUSH_RESTRICTIONS_MISMATCH",
-              "branch summary does not prove required checks for everyone": "SUMMARY_ENFORCEMENT_UNPROVEN",
-              "branch summary disagrees on App-bound checks": "SUMMARY_CHECKS_MISMATCH",
-              "Classic protection or branch changed during audit": "SNAPSHOT_RACE",
-              "GitHub read outside the single pilot main branch denied": "READER_PATH_DENIED",
-              "a scoped installation token is required": "TOKEN_NOT_AVAILABLE",
-          }
+          # Bounded constant diagnostic labels ONLY. No token, raw JSON, actors,
+          # response headers, exception text, or publication artifacts.
+          stage = "SCOPE_GET"
+          composite = None
           try:
               token = os.environ["AUDIT_TOKEN"]
               if not token:
-                  raise ValueError("absent scoped token")
+                  raise ValueError("missing token")
               req = Request(
                   "https://api.github.com/installation/repositories?per_page=100",
                   headers={
@@ -146,20 +114,20 @@ jobs:
                   method="GET",
               )
               with urlopen(req, timeout=20) as response:
-                  if response.status != 200 or 'rel="next"' in response.headers.get("Link", ""):
-                      raise ValueError("incomplete installation repository listing")
+                  if (response.status != 200 or
+                          'rel="next"' in response.headers.get("Link", "")):
+                      raise ValueError("incomplete scope listing")
                   payload = response.read(131073)
-              print("PASS: token installation-repositories GET HTTP 200 (no body logged)")
-              stage[0] = "SCOPE_VALIDATE"
+              stage = "SCOPE_VALIDATE"
               if len(payload) > 131072:
-                  raise ValueError("oversized installation scope response")
+                  raise ValueError("oversized scope listing")
               def unique_object(pairs):
-                  d = {}
-                  for k, v in pairs:
-                      if k in d:
-                          raise ValueError("duplicate JSON field")
-                      d[k] = v
-                  return d
+                  out = {}
+                  for key, value in pairs:
+                      if key in out:
+                          raise ValueError("duplicate scope field")
+                      out[key] = value
+                  return out
               scope = json.loads(payload.decode("utf-8"), object_pairs_hook=unique_object)
               if (type(scope) is not dict or type(scope.get("total_count")) is not int
                       or scope["total_count"] != 1
@@ -167,177 +135,54 @@ jobs:
                       or len(scope["repositories"]) != 1
                       or type(scope["repositories"][0]) is not dict
                       or scope["repositories"][0].get("full_name") != "pgextwin/plpgsql_check"):
-                  raise ValueError("token is not confined to the pilot repository")
-              print("PASS: installation token repository scope exactly plpgsql_check")
-              stage[0] = "PINNED_READER_LOAD"
+                  raise ValueError("token repository scope not exact")
+              print("PASS: scoped App token repository list HTTP 200; exactly plpgsql_check")
+
+              stage = "PINNED_COMPOSITE_LOAD"
               spec = importlib.util.spec_from_file_location(
-                  "classic_protection_audit",
-                  "trusted-build/scripts/classic-protection-audit.py",
+                  "classic_composite_protection",
+                  "trusted-build/scripts/classic-composite-protection.py",
               )
               if spec is None or spec.loader is None:
-                  raise ValueError("pinned reader unavailable")
-              module = importlib.util.module_from_spec(spec)
-              spec.loader.exec_module(module)
+                  raise ValueError("trusted composite verifier unavailable")
+              composite = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(composite)
 
-              # Shape diagnostics only; these deliberately CANNOT prove any
-              # allowance is empty unless the actual REST arrays are present.
-              # No actor identifiers, payload, keys, counts, or exceptions logged.
-              def classify_rest_bypass(details):
-                  if type(details) is not dict:
-                      return "PROTECTION_NOT_OBJECT"
-                  if "required_pull_request_reviews" not in details:
-                      return "REVIEWS_ABSENT"
-                  reviews = details["required_pull_request_reviews"]
-                  if type(reviews) is not dict:
-                      return "REVIEWS_NOT_OBJECT"
-                  if "bypass_pull_request_allowances" not in reviews:
-                      return "BYPASS_ABSENT"
-                  bypass = reviews["bypass_pull_request_allowances"]
-                  if bypass is None:
-                      return "BYPASS_NULL"
-                  if type(bypass) is not dict:
-                      return "BYPASS_NOT_OBJECT"
-                  for kind in ("users", "teams", "apps"):
-                      if kind not in bypass:
-                          return kind.upper() + "_ABSENT"
-                      if type(bypass[kind]) is not list:
-                          return kind.upper() + "_NOT_LIST"
-                      if bypass[kind]:
-                          return kind.upper() + "_NONEMPTY"
-                  return "ALL_THREE_EXPLICITLY_EMPTY"
-
-              class StageReader:
-                  def __init__(self, scoped_token):
-                      self.reader = module.ClassicProtectionReader(scoped_token)
-                      self.calls = 0
-
-                  def get(self, path):
-                      self.calls += 1
-                      part = "BRANCH" if path == module.BRANCH_PATH else "CLASSIC_PROTECTION"
-                      stage[0] = part + "_GET_" + str((self.calls + 1) // 2)
-                      value = self.reader.get(path)
-                      if path == module.PROTECTION_PATH:
-                          print("DIAGNOSTIC: rest_bypass_shape=" + classify_rest_bypass(value))
-                      print("PASS: " + part + " GET HTTP 200 (no body logged)")
-                      stage[0] = part + "_RETURNED_" + str((self.calls + 1) // 2)
-                      return value
-
-              # Independent, read-only GraphQL QUERY. GitHub's GraphQL endpoint
-              # accepts HTTP POST for queries; there is NO mutation and no
-              # Release, tag, workflow or branch settings API call.
-              stage[0] = "GRAPHQL_QUERY"
-              query = """query {
-                repository(owner: "pgextwin", name: "plpgsql_check") {
-                  nameWithOwner
-                  ref(qualifiedName: "refs/heads/main") {
-                    name
-                    prefix
-                    target { oid }
-                    branchProtectionRule {
-                      id
-                      bypassPullRequestAllowances(first: 1) {
-                        totalCount
-                        nodes { id }
-                        pageInfo { hasNextPage }
-                      }
-                    }
-                  }
-                }
-              }"""
-              gql_request = Request(
-                  "https://api.github.com/graphql",
-                  data=json.dumps({"query": query}, separators=(",", ":")).encode("utf-8"),
-                  headers={
-                      "Authorization": "Bearer " + token,
-                      "Accept": "application/vnd.github+json",
-                      "Content-Type": "application/json",
-                      "X-GitHub-Api-Version": "2022-11-28",
-                  },
-                  method="POST",
-              )
-              with urlopen(gql_request, timeout=20) as response:
-                  if response.status != 200:
-                      raise ValueError("GraphQL evidence was not HTTP 200")
-                  gql_bytes = response.read(131073)
-              if len(gql_bytes) > 131072:
-                  raise ValueError("oversized GraphQL response")
-              print("PASS: read-only GraphQL QUERY returned HTTP 200 (no body logged)")
-              stage[0] = "GRAPHQL_VALIDATE"
-              gql_spec = importlib.util.spec_from_file_location(
-                  "classic_graphql_bypass",
-                  "trusted-build/scripts/classic-graphql-bypass.py",
-              )
-              if gql_spec is None or gql_spec.loader is None:
-                  raise ValueError("trusted GraphQL validator missing")
-              graphql_mod = importlib.util.module_from_spec(gql_spec)
-              gql_spec.loader.exec_module(graphql_mod)
-              gql_value = json.loads(gql_bytes.decode("utf-8"), object_pairs_hook=unique_object)
-              gql_proof = graphql_mod.validate_effective_ref_bypass_zero(
-                  gql_value,
+              stage = "COMPOSITE_VERIFY"
+              proof = composite.collect_verified_composite(
+                  composite.CompositeReader(token),
                   expected_main_sha=os.environ["GITHUB_SHA"],
               )
-              if (gql_proof.get("status") != "VERIFIED_EFFECTIVE_REF_BYPASS_ZERO"
-                      or gql_proof.get("publishableReceipt") is not False
-                      or gql_proof.get("mainSha") != os.environ["GITHUB_SHA"]):
-                  raise ValueError("incomplete GraphQL effective main proof")
-              print("PASS: GraphQL effective refs/heads/main bypass count exactly zero; publishableReceipt=false")
-
-              # The original GET-only Classic verifier STILL fails closed on
-              # omitted REST bypass arrays. Live GraphQL proof is independent
-              # evidence, not automatic permission to weaken that contract.
-              stage[0] = "CLASSIC_AUDIT"
-              proof = module.collect_verified_classic(
-                  StageReader(token),
-                  expected_main_sha=os.environ["GITHUB_SHA"],
-              )
-              stage[0] = "FINAL_RECEIPT_DENY_CHECK"
-              if (proof.get("status") != "VERIFIED_CLASSIC_READ_ONLY"
-                      or proof.get("publishableReceipt") is not False
-                      or proof.get("mainSha") != os.environ["GITHUB_SHA"]):
-                  raise ValueError("incomplete nonpublishing result")
-              print("PASS: repository=pgextwin/plpgsql_check; permission=Administration:read")
-              print("PASS: installation=170837728; GET branch=200; GET Classic protection=200 (twice)")
-              print("PASS: strict/required checks/PR/zero approvals/admin/no bypass/no force/no delete")
+              stage = "FINAL_RECEIPT_DENY_CHECK"
+              if (proof.get("status") != "VERIFIED_CLASSIC_COMPOSITE_READ_ONLY"
+                      or proof.get("snapshotCount") != 2
+                      or proof.get("bypassEvidence") != "GRAPHQL_ZERO_FOR_REST_OMISSION"
+                      or proof.get("independentEffectiveRefZero") is not True
+                      or proof.get("mainSha") != os.environ["GITHUB_SHA"]
+                      or proof.get("publishableReceipt") is not False):
+                  raise ValueError("nonpublishing composite receipt mismatch")
+              print("PASS: REST Classic and GraphQL effective-main zero each verified twice")
+              print("PASS: REST bypass omission independently covered by same-token GraphQL")
+              print("PASS: required checks, strict, PR, 0 approvals, admins, no force/delete")
               print("PASS: mainSha=" + os.environ["GITHUB_SHA"] + "; publishableReceipt=false")
           except Exception as exc:
-              # Only constant classifier labels and bounded numeric HTTP status
-              # codes are emitted. Never log exception text or response payload.
-              reason = "INCOMPLETE_OR_UNAVAILABLE"
+              # Only fixed, repository-controlled error codes may be emitted.
+              reason = "UNKNOWN_DENY"
               if isinstance(exc, HTTPError):
-                  reason = "HTTP_" + str(exc.code) if exc.code in (
-                      400, 401, 403, 404, 409, 422, 429, 500, 502, 503, 504
-                  ) else "HTTP_UNEXPECTED"
-              elif graphql_mod is not None and isinstance(exc, graphql_mod.GraphqlBypassDenied):
-                  gql_reasons = {
-                      "expected main SHA invalid": "GRAPHQL_INVALID_SHA",
-                      "GraphQL errors or invalid root": "GRAPHQL_ERRORS_OR_ROOT",
-                      "GraphQL data unavailable": "GRAPHQL_MISSING_DATA",
-                      "GraphQL repository identity mismatch": "GRAPHQL_WRONG_REPO",
-                      "GraphQL effective main Ref unavailable": "GRAPHQL_MAIN_REF_UNKNOWN",
-                      "GraphQL Ref target stale or incorrect": "GRAPHQL_MAIN_SHA_MISMATCH",
-                      "effective Classic branch rule not visible": "GRAPHQL_EFFECTIVE_RULE_UNKNOWN",
-                      "GraphQL bypass connection missing": "GRAPHQL_BYPASS_CONNECTION_MISSING",
-                      "GraphQL bypass allowances nonzero or ambiguous": "GRAPHQL_BYPASS_NONZERO_OR_UNKNOWN",
-                      "GraphQL bypass nodes ambiguous": "GRAPHQL_BYPASS_NODES_UNKNOWN",
-                      "GraphQL bypass page is incomplete": "GRAPHQL_BYPASS_PAGE_INCOMPLETE",
-                  }
-                  reason = gql_reasons.get(str(exc), "GRAPHQL_CONTRACT_DENIED")
-              elif module is not None and isinstance(exc, module.ProtectionDenied):
-                  reason = policy_codes.get(str(exc), "CLASSIC_CONTRACT_DENIED")
-                  http = re.fullmatch(r"Classic GitHub API returned HTTP (\d{3})", str(exc))
-                  if http:
-                      reason = ("CLASSIC_HTTP_" + http.group(1)
-                                if http.group(1) in {"400", "401", "403", "404", "409",
-                                                    "422", "429", "500", "502", "503", "504"}
-                                else "CLASSIC_HTTP_UNEXPECTED")
-              elif stage[0] == "SCOPE_VALIDATE":
-                  reason = "SCOPE_SHAPE_OR_MEMBERSHIP_DENIED"
-              elif stage[0] == "PINNED_READER_LOAD":
-                  reason = "TRUSTED_READER_UNAVAILABLE"
-              elif stage[0] == "FINAL_RECEIPT_DENY_CHECK":
+                  reason = "SCOPE_HTTP_ERROR"
+              elif composite is not None and isinstance(exc, composite.graphql.GraphqlBypassDenied):
+                  reason = "GRAPHQL_PROOF_DENIED"
+              elif composite is not None and isinstance(exc, composite.rest.ProtectionDenied):
+                  reason = "REST_POLICY_DENIED"
+              elif composite is not None and isinstance(exc, composite.CompositeDenied):
+                  reason = "COMPOSITE_PROOF_DENIED"
+              elif stage == "SCOPE_VALIDATE":
+                  reason = "SCOPE_DENIED"
+              elif stage == "PINNED_COMPOSITE_LOAD":
+                  reason = "TRUSTED_VERIFIER_UNAVAILABLE"
+              elif stage == "FINAL_RECEIPT_DENY_CHECK":
                   reason = "NONPUBLISHING_RECEIPT_MISMATCH"
-              print("DENY: stage=" + stage[0] + "; reason=" + reason + "; publishableReceipt=false")
-              print("DENY: authenticated Classic API proof incomplete or unavailable")
+              print("DENY: stage=" + stage + "; reason=" + reason + "; publishableReceipt=false")
               raise SystemExit(1)
           PY
 
