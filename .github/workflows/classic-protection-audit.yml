@@ -178,6 +178,33 @@ jobs:
               module = importlib.util.module_from_spec(spec)
               spec.loader.exec_module(module)
 
+              # Shape diagnostics only; these deliberately CANNOT prove any
+              # allowance is empty unless the actual REST arrays are present.
+              # No actor identifiers, payload, keys, counts, or exceptions logged.
+              def classify_rest_bypass(details):
+                  if type(details) is not dict:
+                      return "PROTECTION_NOT_OBJECT"
+                  if "required_pull_request_reviews" not in details:
+                      return "REVIEWS_ABSENT"
+                  reviews = details["required_pull_request_reviews"]
+                  if type(reviews) is not dict:
+                      return "REVIEWS_NOT_OBJECT"
+                  if "bypass_pull_request_allowances" not in reviews:
+                      return "BYPASS_ABSENT"
+                  bypass = reviews["bypass_pull_request_allowances"]
+                  if bypass is None:
+                      return "BYPASS_NULL"
+                  if type(bypass) is not dict:
+                      return "BYPASS_NOT_OBJECT"
+                  for kind in ("users", "teams", "apps"):
+                      if kind not in bypass:
+                          return kind.upper() + "_ABSENT"
+                      if type(bypass[kind]) is not list:
+                          return kind.upper() + "_NOT_LIST"
+                      if bypass[kind]:
+                          return kind.upper() + "_NONEMPTY"
+                  return "ALL_THREE_EXPLICITLY_EMPTY"
+
               class StageReader:
                   def __init__(self, scoped_token):
                       self.reader = module.ClassicProtectionReader(scoped_token)
@@ -188,6 +215,8 @@ jobs:
                       part = "BRANCH" if path == module.BRANCH_PATH else "CLASSIC_PROTECTION"
                       stage[0] = part + "_GET_" + str((self.calls + 1) // 2)
                       value = self.reader.get(path)
+                      if path == module.PROTECTION_PATH:
+                          print("DIAGNOSTIC: rest_bypass_shape=" + classify_rest_bypass(value))
                       print("PASS: " + part + " GET HTTP 200 (no body logged)")
                       stage[0] = part + "_RETURNED_" + str((self.calls + 1) // 2)
                       return value
