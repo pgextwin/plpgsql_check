@@ -64,8 +64,24 @@ def verify(text):
     locations = [text.find(x) for x in ordered]
     if any(i < 0 for i in locations) or locations != sorted(locations):
         raise ValueError("secret minting occurs before trusted event guard")
-    if "raise SystemExit(1)" not in text or "except Exception:" not in text:
+    if "raise SystemExit(1)" not in text or "except Exception as exc:" not in text:
         raise ValueError("API errors may not fail closed")
+    # A fail-closed diagnostic has an exclusively fixed code vocabulary; it
+    # must not echo the underlying token, raw API body, or exception string.
+    for term in (
+        'stage = ["SCOPE_GET"]',
+        "policy_codes = {",
+        'stage[0] = "SCOPE_VALIDATE"',
+        'stage[0] = "PINNED_READER_LOAD"',
+        "class StageReader:",
+        'stage[0] = "FINAL_RECEIPT_DENY_CHECK"',
+        'reason = policy_codes.get(str(exc), "CLASSIC_CONTRACT_DENIED")',
+        'print("DENY: stage=" + stage[0] + "; reason=" + reason + "; publishableReceipt=false")',
+    ):
+        if term not in text:
+            raise ValueError("fixed, sanitized fail-closed diagnostics missing")
+    if 'print(exc)' in text or 'print(str(exc))' in text or 'traceback.print_exc' in text:
+        raise ValueError("untrusted exception could leak sensitive contents")
     if "AUDIT_TOKEN: ${{ steps.auditor.outputs.token }}" not in text:
         raise ValueError("scoped token is not isolated to the audit reader")
 
