@@ -90,6 +90,7 @@ class GoAOfflinePolicy(unittest.TestCase):
                 "sourceRepositoryDigest": sha,
                 "sourceRepositoryIdentifier": str(policy.REPO_ID),
                 "githubWorkflowTrigger": "workflow_dispatch",
+                "githubWorkflowSHA": sha,
                 "runnerEnvironment": "github-hosted",
                 "buildSignerDigest": policy.PIN,
                 "buildSignerURI": "https://github.com/" + policy.SIGNER + "@refs/heads/main",
