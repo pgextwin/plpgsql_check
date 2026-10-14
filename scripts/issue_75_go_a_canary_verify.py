@@ -299,7 +299,7 @@ def main():
         print(output)
         if os.environ.get("GITHUB_STEP_SUMMARY"):
             with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
-                handle.write("### GO A non-Release evidence\n\n```json\n" + output + "\n```\\n")
+                handle.write("### GO A non-Release evidence\n\n```json\n" + output + "\n```\n")
     except (Deny, ValueError, TypeError, OSError, subprocess.TimeoutExpired) as error:
         print("DENY_GO_A: " + str(error), file=sys.stderr)
         raise SystemExit(2)
