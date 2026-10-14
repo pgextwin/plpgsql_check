@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 from datetime import datetime
 import hashlib
 import json
@@ -61,6 +62,10 @@ def gh(*args):
     # and GitHub CLI's real cryptographic attestation verifier.
     allowed = ((len(args) == 4 and args[:3] == ("api", "--method", "GET") and
                 args[3].startswith(f"repos/{REPO}/")) or
+               (len(args) == 4 and args[:3] == ("api", "--method", "GET") and
+                args[3] in ("repos/pgextwin/build/branches/main",
+                "repos/pgextwin/build/contents/metadata/release-promotion.json?ref=main",
+                "repos/pgextwin/build/contents/metadata/automation-fleet.json?ref=main")) or
                (len(args) > 4 and args[:2] == ("attestation", "verify")))
     need(allowed, "GitHub operation outside read-only allowlist")
     try:
@@ -76,7 +81,32 @@ def api(path):
     return parse(gh("api", "--method", "GET", f"repos/{REPO}/{path}"))
 
 
+def policy_readonly():
+    local = parse(Path("config/release-promotion.json").read_text(encoding="utf-8"))
+    need(local.get("releasePolicy") == "manual-dispatch",
+         "pilot-local publication policy changed")
+    central_head = parse(gh("api", "--method", "GET",
+                            "repos/pgextwin/build/branches/main"))
+    need(central_head.get("protected") is True and
+         central_head.get("commit", {}).get("sha") ==
+         "c6b7af192635c304b16edc8c7b9c1396b2cd025e",
+         "central protected main moved since GO A authorization")
+    for name, expected in (("release-promotion.json", "manual-dispatch"),
+                           ("automation-fleet.json", "manual-only")):
+        path = "repos/pgextwin/build/contents/metadata/" + name + "?ref=main"
+        payload = parse(gh("api", "--method", "GET", path))
+        need(payload.get("encoding") == "base64", "unverified central policy content")
+        data = parse(base64.b64decode(payload["content"]).decode("utf-8"))
+        need(data.get("releasePolicy") == expected, "central policy changed")
+        if name == "automation-fleet.json":
+            entries = data.get("entries")
+            need(isinstance(entries, list) and len(entries) == 14 and
+                 all(x.get("releasePolicy") == "manual-only" for x in entries),
+                 "Fleet 14/14 manual-only has changed")
+
+
 def source_and_lifecycle(lifecycle):
+    policy_readonly()
     manifest = parse(Path("config/extension.json").read_text(encoding="utf-8"))
     want_upstream = {"repository": "okbob/plpgsql_check", "ref": "v2.10.14",
                      "version": "2.10.14",
@@ -140,6 +170,7 @@ def verified_statement(out, kind, name, checksum, sha, run, attempt, sbom):
          cert.get("sourceRepositoryDigest") == sha and
          str(cert.get("sourceRepositoryIdentifier")) == str(REPO_ID) and
          cert.get("githubWorkflowTrigger") == "workflow_dispatch" and
+         cert.get("githubWorkflowSHA") == sha and
          cert.get("runnerEnvironment") == "github-hosted" and
          cert.get("buildSignerDigest") == PIN and
          isinstance(cert.get("buildSignerURI"), str) and
@@ -268,7 +299,7 @@ def main():
         print(output)
         if os.environ.get("GITHUB_STEP_SUMMARY"):
             with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as handle:
-                handle.write("### GO A non-Release evidence\\n\\n```json\\n" + output + "\\n```\\n")
+                handle.write("### GO A non-Release evidence\n\n```json\n" + output + "\n```\\n")
     except (Deny, ValueError, TypeError, OSError, subprocess.TimeoutExpired) as error:
         print("DENY_GO_A: " + str(error), file=sys.stderr)
         raise SystemExit(2)
