@@ -1,6 +1,6 @@
 name: Issue 75 GO A non-Release genuine signed canary (one-shot)
 
-# Never a publication or Publisher rehearsal.
+# Isolated sign-only run; never a formal Release.
 on:
   workflow_dispatch:
     inputs:
