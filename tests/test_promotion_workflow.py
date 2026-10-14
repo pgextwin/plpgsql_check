@@ -52,14 +52,14 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertIn("build-extension.yml@", WINDOWS)
 
     def test_immutable_reusable_workflows(self):
-        uses = re.findall(r"(?m)^\\s*(?:-\\s*)?uses:\\s+([^\\s#]+)", PROMOTION)
+        uses = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s+([^\s#]+)", PROMOTION)
         self.assertGreaterEqual(len(uses), 5)
         self.assertTrue(all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", item) for item in uses), uses)
 
 
 class GoAOfflinePolicy(unittest.TestCase):
     def test_only_dispatch_and_guarded_main_single_attempt(self):
-        self.assertRegex(CANARY, r"(?m)^on:\\n  workflow_dispatch:")
+        self.assertRegex(CANARY, r"(?m)^on:\n  workflow_dispatch:")
         self.assertNotRegex(CANARY, r"(?m)^  (push|pull_request|pull_request_target|workflow_run|schedule|release):")
         self.assertIn("github.ref == 'refs/heads/main'", CANARY)
         self.assertIn("github.run_attempt == 1", CANARY)
@@ -72,7 +72,7 @@ class GoAOfflinePolicy(unittest.TestCase):
                           "gh release ", "gh workflow run ", "create-ref",
                           "publisher", "pull_request_target", "runs-on: self-hosted"):
             self.assertNotIn(forbidden, CANARY.lower() if forbidden == "publisher" else CANARY)
-        refs = re.findall(r"(?m)^\\s*(?:-\\s*)?uses:\\s+([^\\s#]+)", CANARY)
+        refs = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s+([^\s#]+)", CANARY)
         self.assertGreaterEqual(len(refs), 5)
         self.assertTrue(all(re.fullmatch(r"[^@]+@[a-f0-9]{40}", ref) for ref in refs))
         self.assertIn("id-token: write", CANARY)
