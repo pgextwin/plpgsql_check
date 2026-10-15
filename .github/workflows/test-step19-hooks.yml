@@ -29,3 +29,5 @@ jobs:
         run: python3 tests/test_classic_protection_audit_workflow.py
       - name: Deny unsafe Phase D real GitHub expected-denial workflow changes (#75)
         run: python3 tests/test_phase_d_live_deny_workflow.py
+      - name: Deny unauthorized update-watch event, actor, permission or pin drift (B1)
+        run: python3 tests/test_on_demand_update_workflow.py
