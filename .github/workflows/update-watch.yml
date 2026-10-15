@@ -1,29 +1,98 @@
-name: Upstream update watch
+name: Upstream update watch (operator-requested)
 
+# B1 pilot: no schedule/push/repository_dispatch may prepare candidates.
+# Manual dry-run remains read-only; UPDATE + current main SHA is required.
 on:
-  # Main workflow changes exercise read-only acceptance; schedule remains candidate-producing.
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/update-watch.yml
-  schedule:
-    # Daily at 09:00 JST (00:00 UTC; GitHub Actions cron uses UTC).
-    - cron: "0 0 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
-        description: Detect updates without modifying Issues
-        required: false
+        description: Read-only check (uncheck only for explicit candidate request)
+        required: true
         type: boolean
         default: true
+      confirm_update:
+        description: Type UPDATE for a candidate request; leave blank for dry run
+        required: false
+        type: string
+        default: ''
+      expected_main_sha:
+        description: Current protected main 40-character SHA for candidate request
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
-  issues: write
+
+concurrency:
+  group: on-demand-update-${{ github.repository }}
+  cancel-in-progress: false
 
 jobs:
-  watch:
+  authorize:
+    name: Fail-closed dispatch and operator preflight
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      mode: ${{ steps.gate.outputs.mode }}
+    steps:
+      - name: Authorize read-only or human candidate request
+        id: gate
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          REF_NAME: ${{ github.ref }}
+          HEAD_SHA: ${{ github.sha }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          ACTOR: ${{ github.actor }}
+          TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          CONFIRM_UPDATE: ${{ inputs.confirm_update }}
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" != "workflow_dispatch" || "$REPO" != "pgextwin/plpgsql_check" || "$REF_NAME" != "refs/heads/main" || "$RUN_ATTEMPT" != "1" ]]; then
+            echo 'DENY: only first-attempt manual dispatch on pilot/main' >&2
+            exit 1
+          fi
+          if [[ "$DRY_RUN" == "true" ]]; then
+            if [[ -n "$CONFIRM_UPDATE" || -n "$EXPECTED_MAIN_SHA" ]]; then
+              echo 'DENY: dry-run request must not carry a candidate authorization' >&2
+              exit 1
+            fi
+            echo 'mode=read-only' >> "$GITHUB_OUTPUT"
+            echo 'READ_ONLY: upstream detection; no candidate or candidate-decision artifact' >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$DRY_RUN" == "false" ]]; then
+            if [[ "$ACTOR" != "ShutenOishi" || "$TRIGGERING_ACTOR" != "ShutenOishi" || "$CONFIRM_UPDATE" != "UPDATE" || ! "$EXPECTED_MAIN_SHA" =~ ^[0-9a-f]{40}$ || "$EXPECTED_MAIN_SHA" != "$HEAD_SHA" ]]; then
+              echo 'DENY: candidate requires human operator, UPDATE and exact main SHA' >&2
+              exit 1
+            fi
+            echo 'mode=candidate' >> "$GITHUB_OUTPUT"
+            echo 'CANDIDATE_REQUEST: no Release or publication permission' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'DENY: unrecognized dry_run value' >&2
+            exit 1
+          fi
+
+  watch_readonly:
+    name: Read-only upstream check (no candidate artifact)
+    needs: authorize
+    if: ${{ needs.authorize.outputs.mode == 'read-only' }}
+    permissions:
+      contents: read
+      issues: read
+    uses: pgextwin/build/.github/workflows/check-extension-updates.yml@16b886b9d06d6f389b369b87ce0c155767697ca0
+    with:
+      extension_config_path: config/extension.json
+      update_watch_path: config/update-watch.json
+      dry_run: true
+
+  watch_candidate:
+    name: Explicit upstream check and Issue reconciliation
+    needs: authorize
+    if: ${{ needs.authorize.outputs.mode == 'candidate' }}
     permissions:
       contents: read
       issues: write
@@ -31,11 +100,12 @@ jobs:
     with:
       extension_config_path: config/extension.json
       update_watch_path: config/update-watch.json
-      dry_run: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+      dry_run: false
 
   candidate:
-    name: Detect, prepare, and dispatch new stable Windows candidate
-    needs: watch
+    name: Prepare requested SHA-pinned Windows candidate (never Release)
+    needs: [authorize, watch_candidate]
+    if: ${{ needs.authorize.outputs.mode == 'candidate' && needs.watch_candidate.result == 'success' }}
     permissions:
       contents: write
       pull-requests: write
@@ -45,4 +115,4 @@ jobs:
       extension_config_path: config/extension.json
       update_watch_path: config/update-watch.json
       candidate_policy_path: config/candidate-build.json
-      dry_run: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.dry_run) }}
+      dry_run: false
