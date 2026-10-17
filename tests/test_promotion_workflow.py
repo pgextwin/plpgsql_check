@@ -117,7 +117,7 @@ class GoAOfflinePolicy(unittest.TestCase):
                 "buildSignerDigest": policy.PIN,
                 "buildSignerURI": "https://github.com/" + policy.SIGNER + "@refs/heads/main",
                 "runInvocationURI": inv,
-                "subjectAlternativeName": {"type": "URI", "value": "example"}}
+                "subjectAlternativeName": "https://github.com/" + policy.SIGNER + "@refs/heads/main"}
         statement = {"_type": "https://in-toto.io/Statement/v1",
                      "predicateType": policy.SPDX,
                      "subject": [{"name": "test.zip", "digest": {"sha256": digest}}],
@@ -133,7 +133,11 @@ class GoAOfflinePolicy(unittest.TestCase):
                              ("sourceRepositoryDigest", "c" * 40),
                              ("buildSignerDigest", "d" * 40),
                              ("runInvocationURI", inv.replace("/attempts/1", "/attempts/2")),
-                             ("runnerEnvironment", "self-hosted")):
+                             ("runnerEnvironment", "self-hosted"),
+                             ("subjectAlternativeName", "https://attacker.example/workflow"),
+                             ("subjectAlternativeName", ""),
+                             ("subjectAlternativeName", {"type": "URI", "value": "example"}),
+                             ("subjectAlternativeName", None)):
             with self.subTest(field=field), patch.dict(cert, {field: wrong}):
                 with self.assertRaises(policy.Deny):
                     policy.verified_statement(result, policy.SPDX, "test.zip", digest, sha,
@@ -147,6 +151,12 @@ class GoAOfflinePolicy(unittest.TestCase):
         with self.assertRaises(policy.Deny):
             policy.verified_statement([], policy.SPDX, "test.zip", digest, sha,
                                       run, 1, {"spdxVersion": "SPDX-2.3"})
+        # SAN must bind the *same* signer URI verified in the certificate.
+        with patch.dict(cert, {"buildSignerURI":
+                              "https://github.com/" + policy.SIGNER + "@attacker-ref"}):
+            with self.assertRaises(policy.Deny):
+                policy.verified_statement(result, policy.SPDX, "test.zip", digest, sha,
+                                          run, 1, {"spdxVersion": "SPDX-2.3"})
 
     def test_no_duplicate_json_keys_or_write_commands(self):
         with self.assertRaises(policy.Deny):
