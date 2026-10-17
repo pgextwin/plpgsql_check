@@ -58,6 +58,28 @@ class PromotionWorkflow(unittest.TestCase):
 
 
 class GoAOfflinePolicy(unittest.TestCase):
+    def test_required_syntax_check_reaches_protected_main(self):
+        # Main required status must be produced on the exact postmerge main SHA.
+        syntax = (ROOT / ".github/workflows/test-step19-hooks.yml").read_text(encoding="utf-8")
+        self.assertIn(
+            "on:\\n  pull_request:\\n  push:\\n    branches:\\n      - main\\n  workflow_dispatch:".replace("\\n", "\n"),
+            syntax)
+        self.assertIn("  syntax:\n    runs-on: ubuntu-latest", syntax)
+        self.assertIn("permissions:\n  contents: read", syntax)
+        self.assertNotIn("contents: write", syntax)
+        self.assertNotIn("attestations: write", syntax)
+        self.assertNotIn("gh release ", syntax)
+
+    def test_central_main_pin_is_current_and_stale_head_is_denied(self):
+        # A central revision cannot be silently authorized by a moved pointer.
+        self.assertEqual(policy.CENTRAL_MAIN_PIN,
+                         "dfa87e91aa0a65ceaec04cdfc67a3053f87baf75")
+        stale = '{"protected":true,"commit":{"sha":"c6b7af192635c304b16edc8c7b9c1396b2cd025e"}}'
+        with patch.object(policy, "gh", return_value=stale):
+            with self.assertRaisesRegex(policy.Deny,
+                                        "central protected main moved since GO A authorization"):
+                policy.policy_readonly()
+
     def test_only_dispatch_and_guarded_main_single_attempt(self):
         self.assertRegex(CANARY, r"(?m)^on:\n  workflow_dispatch:")
         self.assertNotRegex(CANARY, r"(?m)^  (push|pull_request|pull_request_target|workflow_run|schedule|release):")
