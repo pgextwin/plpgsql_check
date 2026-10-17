@@ -20,6 +20,8 @@ REPO_ID = 1410581312
 WORKFLOW = ".github/workflows/issue-75-pre-g4-signed-canary.yml"
 SIGNER = "pgextwin/build/.github/workflows/build-extension-attested.yml"
 PIN = "5756b3c5136a8bf4db710016cfe97555f0a71c6d"
+# One-shot GO A must fail closed if protected central policy advances again.
+CENTRAL_MAIN_PIN = "dfa87e91aa0a65ceaec04cdfc67a3053f87baf75"
 ISSUER = "https://token.actions.githubusercontent.com"
 SLSA, SPDX = "https://slsa.dev/provenance/v1", "https://spdx.dev/Document/v2.3"
 MAJORS = (14, 15, 16, 17, 18)
@@ -88,8 +90,7 @@ def policy_readonly():
     central_head = parse(gh("api", "--method", "GET",
                             "repos/pgextwin/build/branches/main"))
     need(central_head.get("protected") is True and
-         central_head.get("commit", {}).get("sha") ==
-         "c6b7af192635c304b16edc8c7b9c1396b2cd025e",
+         central_head.get("commit", {}).get("sha") == CENTRAL_MAIN_PIN,
          "central protected main moved since GO A authorization")
     for name, expected in (("release-promotion.json", "manual-dispatch"),
                            ("automation-fleet.json", "manual-only")):
