@@ -34,3 +34,7 @@ jobs:
         run: python3 tests/test_phase_d_live_deny_workflow.py
       - name: Deny unauthorized update-watch event, actor, permission or pin drift (B1)
         run: python3 tests/test_on_demand_update_workflow.py
+      - name: Validate existing-run SAN URI and deny forged recovery evidence (#75)
+        run: |
+          python3 tests/test_promotion_workflow.py
+          python3 tests/test_issue_75_go_a_readonly_recovery.py
