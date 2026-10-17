@@ -177,7 +177,8 @@ def verified_statement(out, kind, name, checksum, sha, run, attempt, sbom):
          isinstance(cert.get("buildSignerURI"), str) and
          cert["buildSignerURI"].startswith(signer_uri) and
          cert.get("runInvocationURI") == invocation and
-         cert.get("subjectAlternativeName", {}).get("type") == "URI" and
+         isinstance(cert.get("subjectAlternativeName"), str) and
+         cert["subjectAlternativeName"] == cert["buildSignerURI"] and
          evidence.get("verifiedTimestamps"), "verified X.509 OIDC/signer/run identity DENY")
     pred = statement.get("predicate") or {}
     if kind == SPDX:
