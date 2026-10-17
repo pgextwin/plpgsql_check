@@ -1,0 +1,102 @@
+name: Issue 75 Phase D real GitHub DENY proof (no publication)
+
+# Intentionally one-shot protected-main push / path-only. Not a publisher.
+# No PR or Dispatch credentialed trigger; no release/tag/workflow writes.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/phase-d-live-deny-probe.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-75-phase-d-negative-proof-main
+  cancel-in-progress: false
+
+jobs:
+  phase_d_expected_denial:
+    name: Phase D live read-only DENY proof
+    if: ${{ github.event_name == 'push' && github.repository == 'pgextwin/plpgsql_check' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      checks: read
+      pull-requests: read
+      attestations: read
+    steps:
+      - name: Deny unknown App, operator, event, attempt or SHA before secret use
+        shell: bash
+        env:
+          EXPECTED_APP_ID: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_APP_ID }}
+          EXPECTED_CLIENT_ID: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_CLIENT_ID }}
+          EXPECTED_INSTALLATION_ID: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_INSTALLATION_ID }}
+          PROBE_ACTOR: ${{ github.actor }}
+          PROBE_ATTEMPT: ${{ github.run_attempt }}
+          PROBE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EXPECTED_APP_ID" != "5295410" ||
+                "$EXPECTED_CLIENT_ID" != "Iv23lidY1vsm7ZseyKe2" ||
+                "$EXPECTED_INSTALLATION_ID" != "170837728" ||
+                "$PROBE_ACTOR" != "ShutenOishi" ||
+                "$PROBE_ATTEMPT" != "1" ||
+                ! "$PROBE_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'DENY: protected-main preflight failed; publishableReceipt=false'
+            exit 1
+          fi
+          echo 'PASS: protected-main human push preflight; publishableReceipt=false'
+
+      - name: Checkout reviewed immutable read-only probe code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: pgextwin/build
+          ref: 0455cdef6e9ce2cb1cbb92ccd96e2a623eaba034
+          path: trusted-build
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Mint existing single-repo Administration READ token
+        id: auditor
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_APP_ID }}
+          private-key: ${{ secrets.PGEXTWIN_PROTECTION_AUDITOR_PRIVATE_KEY }}
+          owner: pgextwin
+          repositories: plpgsql_check
+          permission-administration: read
+          permission-metadata: read
+          skip-token-revoke: false
+
+      - name: Reject untrusted App installation identity
+        shell: bash
+        env:
+          MINTED_INSTALLATION_ID: ${{ steps.auditor.outputs.installation-id }}
+          MINTED_APP_SLUG: ${{ steps.auditor.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          if [[ "$MINTED_INSTALLATION_ID" != "170837728" ||
+                "$MINTED_APP_SLUG" != "pgextwin-classic-protection-audit" ]]; then
+            echo 'DENY: App installation mismatch; publishableReceipt=false'
+            exit 1
+          fi
+          echo 'PASS: scoped read-only App installation identity'
+
+      - name: Exercise authenticated missing-auth, draft and unsigned-candidate DENY
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ steps.auditor.outputs.token }}
+          EVIDENCE_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -euo pipefail
+          python3 trusted-build/scripts/chat-pr-phase-d-live-deny-probe.py
+
+      - name: Confirm only an expected negative audit, never publication
+        if: ${{ success() }}
+        run: echo 'DRY_RUN_NEGATIVE_PROOF_ONLY; no Release, tag, Dispatch, or PUBLISH authorization'

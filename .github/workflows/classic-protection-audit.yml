@@ -1,0 +1,218 @@
+name: Issue 75 Classic protection authenticated read-only proof
+
+# This is a one-time nonpublishing proof, NOT an authorization or Dispatch API.
+# PR code never receives secrets: credentials are minted on protected main only.
+# Secret-rotation retry 2026-10-13: fresh protected-main proof; no policy or permission change.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/classic-protection-audit.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: issue-75-classic-audit-main
+  cancel-in-progress: false
+
+jobs:
+  classic_protection_read:
+    name: Classic protection read-only proof
+    if: ${{ github.event_name == 'push' && github.repository == 'pgextwin/plpgsql_check' && github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Deny unexpected identity, event or missing App variables before secret use
+        shell: bash
+        env:
+          EXPECTED_APP_ID: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_APP_ID }}
+          EXPECTED_CLIENT_ID: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_CLIENT_ID }}
+          EXPECTED_INSTALLATION_ID: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_INSTALLATION_ID }}
+          PROBE_ACTOR: ${{ github.actor }}
+          PROBE_ATTEMPT: ${{ github.run_attempt }}
+          PROBE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$EXPECTED_APP_ID" != "5295410" ||
+                "$EXPECTED_CLIENT_ID" != "Iv23lidY1vsm7ZseyKe2" ||
+                "$EXPECTED_INSTALLATION_ID" != "170837728" ||
+                "$PROBE_ACTOR" != "ShutenOishi" ||
+                "$PROBE_ATTEMPT" != "1" ||
+                ! "$PROBE_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "DENY: unapproved App identity, event provenance or configuration"
+            exit 1
+          fi
+          echo "Preflight PASS: exact App identifiers, user-initiated protected-main push, first attempt"
+
+      - name: Checkout reviewed audit code from immutable build main commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: pgextwin/build
+          ref: b63f9c9cbe66748fe10707961fd31a236664f8ca
+          path: trusted-build
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Mint single-repo Administration read-only installation token
+        id: auditor
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2 immutable
+        with:
+          app-id: ${{ vars.PGEXTWIN_PROTECTION_AUDITOR_APP_ID }}
+          private-key: ${{ secrets.PGEXTWIN_PROTECTION_AUDITOR_PRIVATE_KEY }}
+          owner: pgextwin
+          repositories: plpgsql_check
+          permission-administration: read
+          permission-metadata: read
+          skip-token-revoke: false
+
+      - name: Deny a different App installation or App slug
+        shell: bash
+        env:
+          MINTED_INSTALLATION_ID: ${{ steps.auditor.outputs.installation-id }}
+          MINTED_APP_SLUG: ${{ steps.auditor.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          if [[ "$MINTED_INSTALLATION_ID" != "170837728" ||
+                "$MINTED_APP_SLUG" != "pgextwin-classic-protection-audit" ]]; then
+            echo "DENY: the token issuer does not match the dedicated pilot installation"
+            exit 1
+          fi
+          echo "Installation identity PASS (no credential values emitted)"
+
+      - name: Verify one-repo scope and two full same-token REST GraphQL snapshots
+        shell: bash
+        env:
+          AUDIT_TOKEN: ${{ steps.auditor.outputs.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import importlib.util
+          import json
+          import os
+          from urllib.error import HTTPError
+          from urllib.request import Request, urlopen
+
+          # Bounded constant diagnostic labels ONLY. No token, raw JSON, actors,
+          # response headers, exception text, or publication artifacts.
+          stage = "SCOPE_GET"
+          composite = None
+          try:
+              token = os.environ["AUDIT_TOKEN"]
+              if not token:
+                  raise ValueError("missing token")
+              req = Request(
+                  "https://api.github.com/installation/repositories?per_page=100",
+                  headers={
+                      "Authorization": "Bearer " + token,
+                      "Accept": "application/vnd.github+json",
+                      "X-GitHub-Api-Version": "2022-11-28",
+                  },
+                  method="GET",
+              )
+              with urlopen(req, timeout=20) as response:
+                  if (response.status != 200 or
+                          'rel="next"' in response.headers.get("Link", "")):
+                      raise ValueError("incomplete scope listing")
+                  payload = response.read(131073)
+              stage = "SCOPE_VALIDATE"
+              if len(payload) > 131072:
+                  raise ValueError("oversized scope listing")
+              def unique_object(pairs):
+                  out = {}
+                  for key, value in pairs:
+                      if key in out:
+                          raise ValueError("duplicate scope field")
+                      out[key] = value
+                  return out
+              scope = json.loads(payload.decode("utf-8"), object_pairs_hook=unique_object)
+              if (type(scope) is not dict or type(scope.get("total_count")) is not int
+                      or scope["total_count"] != 1
+                      or type(scope.get("repositories")) is not list
+                      or len(scope["repositories"]) != 1
+                      or type(scope["repositories"][0]) is not dict
+                      or scope["repositories"][0].get("full_name") != "pgextwin/plpgsql_check"):
+                  raise ValueError("token repository scope not exact")
+              print("PASS: scoped App token repository list HTTP 200; exactly plpgsql_check")
+
+              stage = "PINNED_COMPOSITE_LOAD"
+              spec = importlib.util.spec_from_file_location(
+                  "classic_composite_protection",
+                  "trusted-build/scripts/classic-composite-protection.py",
+              )
+              if spec is None or spec.loader is None:
+                  raise ValueError("trusted composite verifier unavailable")
+              composite = importlib.util.module_from_spec(spec)
+              spec.loader.exec_module(composite)
+
+              stage = "COMPOSITE_VERIFY"
+              proof = composite.collect_verified_composite(
+                  composite.CompositeReader(token),
+                  expected_main_sha=os.environ["GITHUB_SHA"],
+              )
+              stage = "FINAL_RECEIPT_DENY_CHECK"
+              if (proof.get("status") != "VERIFIED_CLASSIC_COMPOSITE_READ_ONLY"
+                      or proof.get("snapshotCount") != 2
+                      or proof.get("bypassEvidence") != "GRAPHQL_ZERO_FOR_REST_OMISSION"
+                      or proof.get("pushEvidence") != "GRAPHQL_UNRESTRICTED_FOR_REST_OMISSION"
+                      or proof.get("independentEffectiveRefZero") is not True
+                      or proof.get("independentPushUnrestricted") is not True
+                      or proof.get("mainSha") != os.environ["GITHUB_SHA"]
+                      or proof.get("publishableReceipt") is not False):
+                  raise ValueError("nonpublishing composite receipt mismatch")
+              print("PASS: REST Classic and GraphQL effective-main zero each verified twice")
+              print("PASS: REST bypass omission independently covered by same-token GraphQL")
+              print("PASS: REST push restrictions omission independently covered by GraphQL false/zero")
+              print("PASS: required checks, strict, PR, 0 approvals, admins, no force/delete")
+              print("PASS: mainSha=" + os.environ["GITHUB_SHA"] + "; publishableReceipt=false")
+          except Exception as exc:
+              # Only fixed, repository-controlled error codes may be emitted.
+              reason = "UNKNOWN_DENY"
+              if isinstance(exc, HTTPError):
+                  reason = "SCOPE_HTTP_ERROR"
+              elif composite is not None and isinstance(exc, composite.graphql.GraphqlBypassDenied):
+                  reason = "GRAPHQL_PROOF_DENIED"
+              elif composite is not None and isinstance(exc, composite.rest.ProtectionDenied):
+                  # Fixed labels from the reviewed, pinned REST verifier only.
+                  # Never emit original exception text, field values, or actors.
+                  rest_reasons = {
+                      "branch is unprotected, stale or not main": "MAIN_SHA_OR_PROTECTION",
+                      "Classic protection detail is missing": "CLASSIC_DETAIL_MISSING",
+                      "required up-to-date status checks (strict) are missing": "STRICT_CHECKS_MISSING",
+                      "required status contexts are missing, duplicated or unexpected": "CHECK_CONTEXTS_MISMATCH",
+                      "App-bound required status checks are incomplete": "CHECK_APPS_INCOMPLETE",
+                      "required check has a wrong name, duplicate, or untrusted App": "CHECK_APP_UNTRUSTED",
+                      "App-bound check list differs from expected Classic policy": "CHECK_APPS_MISMATCH",
+                      "required checks not enforced on everyone": "CHECKS_ENFORCEMENT_UNKNOWN",
+                      "PR requirement / zero approving reviews not proven": "PR_ZERO_APPROVALS_UNPROVEN",
+                      "PR bypass actor status absent or nonempty": "REST_BYPASS_PROOF_DENIED",
+                      "invalid or missing Classic protection enforce_admins": "ADMIN_ENFORCEMENT_UNPROVEN",
+                      "invalid or missing Classic protection allow_force_pushes": "FORCE_PUSH_PROHIBITION_UNPROVEN",
+                      "invalid or missing Classic protection allow_deletions": "DELETION_PROHIBITION_UNPROVEN",
+                      "push actor restrictions are unknown": "PUSH_RESTRICTIONS_ABSENT",
+                      "push actor restrictions differ from audited policy": "PUSH_RESTRICTIONS_UNPROVEN",
+                      "branch summary does not prove required checks for everyone": "BRANCH_SUMMARY_ENFORCEMENT_UNKNOWN",
+                      "branch summary disagrees on App-bound checks": "BRANCH_SUMMARY_CHECKS_MISMATCH",
+                      "duplicate field in authenticated GitHub response": "DUPLICATE_JSON_FIELD",
+                      "invalid or ambiguous GitHub JSON response": "INVALID_JSON",
+                      "GitHub protection evidence is not an object": "RESPONSE_NOT_OBJECT",
+                  }
+                  reason = rest_reasons.get(str(exc), "REST_POLICY_DENIED")
+              elif composite is not None and isinstance(exc, composite.CompositeDenied):
+                  reason = "COMPOSITE_PROOF_DENIED"
+              elif stage == "SCOPE_VALIDATE":
+                  reason = "SCOPE_DENIED"
+              elif stage == "PINNED_COMPOSITE_LOAD":
+                  reason = "TRUSTED_VERIFIER_UNAVAILABLE"
+              elif stage == "FINAL_RECEIPT_DENY_CHECK":
+                  reason = "NONPUBLISHING_RECEIPT_MISMATCH"
+              print("DENY: stage=" + stage + "; reason=" + reason + "; publishableReceipt=false")
+              raise SystemExit(1)
+          PY
+
+      - name: Record nonpublishing completion only
+        if: ${{ success() }}
+        run: echo "DRY_RUN_CONTEXT_ONLY; no Release, tag, Dispatch, or publication authorization"
