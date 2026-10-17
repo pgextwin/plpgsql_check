@@ -34,3 +34,33 @@ jobs:
         run: python3 tests/test_phase_d_live_deny_workflow.py
       - name: Deny unauthorized update-watch event, actor, permission or pin drift (B1)
         run: python3 tests/test_on_demand_update_workflow.py
+      - name: Validate existing-run SAN URI and deny forged recovery evidence (#75)
+        run: |
+          python3 tests/test_promotion_workflow.py
+          python3 tests/test_issue_75_go_a_readonly_recovery.py
+
+  # One-off historical evidence check for Issue #75 PR #45 only.
+  # This is standard PR CI: no workflow_dispatch, no re-run of canary, no signer.
+  original_go_a_readonly_recovery:
+    name: Read-only cryptographic audit of original failed GO A Run
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.number == 45 }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: pgextwin/build
+          ref: 5756b3c5136a8bf4db710016cfe97555f0a71c6d
+          path: .pgextwin-build-go-a
+          persist-credentials: false
+      - name: Verify original failed Run and existing 10 signed packages only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/issue_75_go_a_readonly_recover.py --trusted-build .pgextwin-build-go-a
