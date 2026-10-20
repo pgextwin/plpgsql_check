@@ -1,0 +1,89 @@
+name: One-time PG14 compatibility backfill — verified attested Release
+
+on:
+  push:
+    branches:
+      - release/v2.10.13-windows.2
+
+concurrency:
+  group: pgextwin-plpgsql-check-pg14-backfill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  authorize:
+    name: Independently verify unchanged upstream and complete PG14–18 main CI
+    if: ${{ github.repository == 'pgextwin/plpgsql_check' && github.ref == 'refs/heads/release/v2.10.13-windows.2' && github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: pgextwin/build
+          ref: 5756b3c5136a8bf4db710016cfe97555f0a71c6d
+          path: .pgextwin-build
+          persist-credentials: false
+      - name: Verify offline denial matrix
+        run: python3 tests/test_pg14_backfill.py
+      - name: Verify immutable source, unexpired PG14 and successful same-main CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/pg14-backfill-preflight.py
+
+  release_build:
+    name: Fresh signed PG14–18 ZIP, SPDX, Grype and attestation matrix
+    needs: authorize
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    uses: pgextwin/build/.github/workflows/build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d
+    with:
+      extension_config_path: config/extension.json
+      test_contract_path: config/test-contract.json
+
+  independent_audit:
+    name: Verify all five packaged sources and both signed attestations
+    needs: [authorize, release_build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      attestations: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: pgextwin/build
+          ref: 5756b3c5136a8bf4db710016cfe97555f0a71c6d
+          path: .pgextwin-build
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: plpgsql_check-pg*-windows-x64
+          path: dist
+          merge-multiple: true
+      - name: Recheck source identity, package metadata and all signed attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/pg14-backfill-preflight.py --audit dist
+
+  release:
+    name: Create-only v2.10.13-windows.2 Release; do not rewrite historical release
+    needs: [release_build, independent_audit]
+    permissions:
+      contents: write
+    uses: pgextwin/build/.github/workflows/release-extension.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d
+    with:
+      extension_name: ${{ needs.release_build.outputs.extension_name }}
+      upstream_repository: ${{ needs.release_build.outputs.upstream_repository }}
