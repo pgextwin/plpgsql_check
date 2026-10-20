@@ -32,6 +32,8 @@ jobs:
         run: python3 tests/test_classic_protection_audit_workflow.py
       - name: Deny unsafe Phase D real GitHub expected-denial workflow changes (#75)
         run: python3 tests/test_phase_d_live_deny_workflow.py
+      - name: Reject retired Issue75 historical one-shot CI resurrection
+        run: python3 -m unittest discover -s tests -p test_retired_issue_75_runners.py -v
       - name: Deny unauthorized update-watch event, actor, permission or pin drift (B1)
         run: python3 tests/test_on_demand_update_workflow.py
       - name: Validate existing-run SAN URI and deny forged recovery evidence (#75)
