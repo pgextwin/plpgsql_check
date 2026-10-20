@@ -3,7 +3,7 @@
 from pathlib import Path
 import re
 
-WORKFLOW = Path(".github/workflows/classic-protection-audit.yml")
+WORKFLOW = Path("tests/fixtures/historical-workflows/classic-protection-audit.yml")
 
 def verify(text):
     required = (
