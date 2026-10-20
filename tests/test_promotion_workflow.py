@@ -9,7 +9,7 @@ from unittest.mock import patch
 ROOT = Path(__file__).resolve().parents[1]
 PROMOTION = (ROOT / ".github/workflows/promote.yml").read_text(encoding="utf-8")
 WINDOWS = (ROOT / ".github/workflows/windows.yml").read_text(encoding="utf-8")
-CANARY = (ROOT / ".github/workflows/issue-75-pre-g4-signed-canary.yml").read_text(encoding="utf-8")
+CANARY = (ROOT / "tests/fixtures/historical-workflows/issue-75-pre-g4-signed-canary.yml").read_text(encoding="utf-8")
 spec = importlib.util.spec_from_file_location(
     "go_a_policy", ROOT / "scripts/issue_75_go_a_canary_verify.py")
 policy = importlib.util.module_from_spec(spec)
