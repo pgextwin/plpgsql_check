@@ -17,32 +17,33 @@ spec.loader.exec_module(policy)
 
 
 class PromotionWorkflow(unittest.TestCase):
-    def test_checkout_has_complete_main_ancestry(self):
-        authorize = PROMOTION.split("  authorize:", 1)[1].split("  release_build:", 1)[0]
-        self.assertIn("fetch-depth: 0", authorize)
-        self.assertIn("persist-credentials: false", authorize)
-        self.assertIn("fleet-promotion-gate.py", authorize)
-
-    def test_manual_dispatch_and_scoped_publication(self):
+    def test_existing_manual_dispatch_policy_is_preserved(self):
         self.assertIn("workflow_dispatch:", PROMOTION)
-        self.assertIn("github.ref == 'refs/heads/main'", PROMOTION)
-        self.assertIn("release-promotion.json", PROMOTION)
-        self.assertIn("needs: [authorize, release_build]", PROMOTION)
-        self.assertIn("cancel-in-progress: false", PROMOTION)
-        self.assertIn("promotion-recovery", PROMOTION)
-        self.assertIn("--lifecycle .pgextwin-build/metadata/postgresql.json", PROMOTION)
-        self.assertIn("455f0ccc667697f600700a6e64bcfd6c57b6a977", PROMOTION)
-        self.assertNotIn("environment: formal-release", PROMOTION)
         self.assertIn("confirm_release:", PROMOTION)
-        self.assertIn('--confirm-release "$CONFIRM_RELEASE"', PROMOTION)
         self.assertIn("Type PUBLISH", PROMOTION)
-        self.assertNotIn("approval_pr:", PROMOTION)
-        self.assertNotIn("--approval-pr", PROMOTION)
-        self.assertNotIn("human-reviewed", PROMOTION)
-        self.assertIn("fleet-publish-release.py", PROMOTION)
+        self.assertIn("github.ref == 'refs/heads/main'", PROMOTION)
+        self.assertIn("cancel-in-progress: false", PROMOTION)
+        for key in ("candidate_pr", "candidate_run_id", "decision_run_id",
+                    "release_tag", "confirm_release"):
+            self.assertIn(key + ": ${{ inputs." + key + " }}", PROMOTION)
         self.assertNotIn("pull_request_target", PROMOTION)
+        self.assertNotIn("gh release ", PROMOTION)
+        self.assertNotIn("secrets: inherit", PROMOTION)
+        self.assertNotIn("environment: formal-release", PROMOTION)
+
+    def test_exact_pinned_shared_promotion_not_inline_privileged_copy(self):
+        self.assertIn(
+            "pgextwin/build/.github/workflows/promote-verified-release.yml@"
+            "5425225ea858f8c0165421902c3e66c6c9205f60", PROMOTION)
+        self.assertNotIn("fleet-promotion-gate.py", PROMOTION)
+        self.assertNotIn("fleet-publish-release.py", PROMOTION)
+        self.assertNotIn("release_build:", PROMOTION)
         self.assertNotIn("--clobber", PROMOTION)
-        self.assertNotIn("gh release delete", PROMOTION)
+        self.assertIn("catalog_app_private_key:", PROMOTION)
+        # The central pinned workflow has its own required static hostile tests.
+        uses = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s+([^\s#]+)", PROMOTION)
+        self.assertEqual(len(uses), 1)
+        self.assertTrue(all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", x) for x in uses))
 
     def test_no_unapproved_release_branch_path(self):
         self.assertNotIn('      - "release/**"', WINDOWS)
@@ -50,11 +51,6 @@ class PromotionWorkflow(unittest.TestCase):
         self.assertNotIn("  release_build:", WINDOWS)
         self.assertIn("candidate_report:", WINDOWS)
         self.assertIn("build-extension.yml@", WINDOWS)
-
-    def test_immutable_reusable_workflows(self):
-        uses = re.findall(r"(?m)^\s*(?:-\s*)?uses:\s+([^\s#]+)", PROMOTION)
-        self.assertGreaterEqual(len(uses), 5)
-        self.assertTrue(all(re.fullmatch(r"[^@]+@[0-9a-f]{40}", item) for item in uses), uses)
 
 
 class GoAOfflinePolicy(unittest.TestCase):
