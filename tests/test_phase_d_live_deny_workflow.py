@@ -3,7 +3,7 @@
 from pathlib import Path
 import re
 
-WORKFLOW = Path(".github/workflows/phase-d-live-deny-probe.yml")
+WORKFLOW = Path("tests/fixtures/historical-workflows/phase-d-live-deny-probe.yml")
 
 
 def verify(workflow):
