@@ -36,6 +36,9 @@ def verify(src):
             raise ValueError("Missing pinned scheduled candidate contract: " + marker[:85])
     if src.count("dry_run: false") != 2:
         raise ValueError("original candidate-only jobs changed")
+    # Both candidate jobs must retain this authorization, not just one.
+    if src.count("needs.authorize.outputs.mode == 'candidate'") != 2:
+        raise ValueError("both scoped candidate jobs must depend on candidate mode")
     for forbidden in (
         "\n  workflow_dispatch:", "\n  push:", "\n  pull_request:",
         "\n  repository_dispatch:", "\n  workflow_call:",
