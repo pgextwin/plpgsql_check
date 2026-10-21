@@ -1,108 +1,93 @@
 #!/usr/bin/env python3
-"""B1: offline adversarial contract for nonpublishing request-only update watch."""
+"""Offline B1: delegated read-only gate and original candidate job isolation.
+
+The exact human UPDATE Bash gate and 17-repo SHA cohorts run in the central
+build required CI. These local hostile tests enforce protected immutable pins
+and job-specific mutation permissions; they do not issue any credentials.
+"""
 from pathlib import Path
 import re
 
-PATH = Path('.github/workflows/update-watch.yml')
-PIN = '16b886b9d06d6f389b369b87ce0c155767697ca0'
+PATH = Path(".github/workflows/update-watch.yml")
+SHARED = "33853f3a4381bfc2d984fad371e5ba5c768595a5"
+PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
 def verify(s):
-    for marker in (
-        'on:\n  workflow_dispatch:', 'default: true', 'permissions:\n  contents: read',
-        'cancel-in-progress: false',
-        'EVENT_NAME: ${{ github.event_name }}', 'REPO: ${{ github.repository }}',
-        'REF_NAME: ${{ github.ref }}', 'HEAD_SHA: ${{ github.sha }}',
-        'ACTOR: ${{ github.actor }}', 'TRIGGERING_ACTOR: ${{ github.triggering_actor }}',
-        'RUN_ATTEMPT: ${{ github.run_attempt }}', 'DRY_RUN: ${{ inputs.dry_run }}',
-        'CONFIRM_UPDATE: ${{ inputs.confirm_update }}',
-        'EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}',
-        '"$EVENT_NAME" != "workflow_dispatch"',
-        '"$REPO" != "pgextwin/plpgsql_check"',
-        '"$REF_NAME" != "refs/heads/main"', '"$RUN_ATTEMPT" != "1"',
-        '"$ACTOR" != "ShutenOishi"', '"$TRIGGERING_ACTOR" != "ShutenOishi"',
-        '"$CONFIRM_UPDATE" != "UPDATE"',
-        '"$EXPECTED_MAIN_SHA" =~ ^[0-9a-f]{40}$',
-        '"$EXPECTED_MAIN_SHA" != "$HEAD_SHA"',
-        'if [[ -n "$CONFIRM_UPDATE" || -n "$EXPECTED_MAIN_SHA" ]]',
-        'echo \'mode=read-only\' >> "$GITHUB_OUTPUT"',
-        'echo \'mode=candidate\' >> "$GITHUB_OUTPUT"',
-        "if: ${{ needs.authorize.outputs.mode == 'read-only' }}",
+    required = (
+        "on:\n  workflow_dispatch:", "default: true",
+        "permissions:\n  contents: read",
+        "cancel-in-progress: false",
+        "  authorize:\n    name: Shared strict operator preflight and GET-only update watch",
+        "    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-readonly.yml@" + SHARED,
+        "      dry_run: ${{ inputs.dry_run }}",
+        "      confirm_update: ${{ inputs.confirm_update }}",
+        "      expected_main_sha: ${{ inputs.expected_main_sha }}",
+        "      detector_sha: " + PIN,
+        "  watch_candidate:\n", "  candidate:\n",
+        "needs: authorize",
         "if: ${{ needs.authorize.outputs.mode == 'candidate' }}",
         "if: ${{ needs.authorize.outputs.mode == 'candidate' && needs.watch_candidate.result == 'success' }}",
-    ):
+        "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + PIN,
+        "uses: pgextwin/build/.github/workflows/candidate-update.yml@" + PIN,
+        "candidate_policy_path: config/candidate-build.json",
+        "dry_run: false",
+    )
+    for marker in required:
         if marker not in s:
-            raise ValueError('Missing guarded input/condition: ' + marker[:65])
-    if any(token in s for token in (
-        '\n  schedule:', '\n  push:', '\n  pull_request:', '\n  repository_dispatch:',
-        '\n  workflow_call:', 'gh release ', 'confirm_release=PUBLISH',
-        'build-extension-attested.yml',
-    )):
-        raise ValueError('Unapproved automatic/publication trigger')
-    if not re.search(r'(?m)^  authorize:$', s):
-        raise ValueError('Authorization required')
-    sections = {
-        'watch_readonly': s.split('  watch_readonly:\n', 1)[1].split('  watch_candidate:\n', 1)[0],
-        'watch_candidate': s.split('  watch_candidate:\n', 1)[1].split('  candidate:\n', 1)[0],
-        'candidate': s.split('  candidate:\n', 1)[1],
-    }
-    ro = sections['watch_readonly']
-    if not re.search(r'(?m)^    permissions:\n      contents: read$', ro):
-        raise ValueError('Read-only job token not read-only')
-    if ro.count('persist-credentials: false') != 2 or 'persist-credentials: true' in ro:
-        raise ValueError('Read-only checkout persisted credentials')
-    if any(token in ro for token in ('issues: write', 'contents: write',
-                                     'upload-artifact', 'candidate-update.yml',
-                                     'reconcile-update-issue', 'gh workflow run ')):
-        raise ValueError('Read-only job attempted mutation')
-    for marker in (f'ref: {PIN}', f'--watcher-sha {PIN}',
-                   'scripts/fleet-control.py', '--action watch',
-                   'scripts/check-upstream-update.py',
-                   'scripts/write-update-watch-summary.py'):
-        if marker not in ro:
-            raise ValueError('Missing pinned read-only source or command: ' + marker)
-    if not re.search(r'(?m)^    permissions:\n      contents: read\n      issues: write$', sections['watch_candidate']):
-        raise ValueError('Candidate watch permissions drifted')
-    if f'uses: pgextwin/build/.github/workflows/check-extension-updates.yml@{PIN}' not in sections['watch_candidate'] or 'dry_run: false' not in sections['watch_candidate']:
-        raise ValueError('Missing pinned candidate-only watch')
-    if not re.search(r'(?m)^    permissions:\n      contents: write\n      pull-requests: write\n      actions: write$', sections['candidate']):
-        raise ValueError('Candidate permission boundary changed')
-    if f'uses: pgextwin/build/.github/workflows/candidate-update.yml@{PIN}' not in sections['candidate'] or 'dry_run: false' not in sections['candidate']:
-        raise ValueError('Missing pinned candidate-only proposer')
-    if s.count('dry_run: false') != 2 or s.count('dry_run: true') != 0:
-        raise ValueError('Unexpected candidate operation path')
+            raise ValueError("Missing immutable delegated UPDATE contract: " + marker[:85])
+    if s.count("dry_run: false") != 2 or s.count("dry_run: ${{ inputs.dry_run }}") != 1:
+        raise ValueError("Unexpected candidate/readonly mode wiring")
+    for forbidden in (
+        "\n  schedule:", "\n  push:", "\n  pull_request:",
+        "\n  repository_dispatch:", "\n  workflow_call:",
+        "gh release ", "confirm_release=PUBLISH", "build-extension-attested.yml",
+        "  watch_readonly:\n", "GH_TOKEN:", "secrets.", "persist-credentials: true",
+    ):
+        if forbidden in s:
+            raise ValueError("Unapproved event, publication or credential path")
+    if not re.search(r"(?m)^  authorize:\n(?:    .*\n)*?    permissions:\n      contents: read\n", s):
+        raise ValueError("Delegated preflight must not get a write-capable token")
+    wc = s.split("  watch_candidate:\n", 1)[1].split("  candidate:\n", 1)[0]
+    candidate = s.split("  candidate:\n", 1)[1]
+    if not re.search(r"(?m)^    permissions:\n      contents: read\n      issues: write$", wc):
+        raise ValueError("Original Issue reconciliation authorization changed")
+    if not re.search(r"(?m)^    permissions:\n      contents: write\n      pull-requests: write\n      actions: write$", candidate):
+        raise ValueError("Original candidate writer authorization changed")
 
 
 def main():
-    src = PATH.read_text(encoding='utf-8')
+    src = PATH.read_text(encoding="utf-8")
     verify(src)
-    mutants = (
-        ('on:\n  workflow_dispatch:', 'on:\n  schedule:'),
-        ('default: true', 'default: false'),
-        ('"$REF_NAME" != "refs/heads/main"', '"$REF_NAME" != "refs/heads/feature"'),
-        ('"$ACTOR" != "ShutenOishi"', '"$ACTOR" != "github-actions[bot]"'),
-        ('"$TRIGGERING_ACTOR" != "ShutenOishi"', '"$TRIGGERING_ACTOR" != "github-actions[bot]"'),
-        ('"$RUN_ATTEMPT" != "1"', '"$RUN_ATTEMPT" != "2"'),
-        ('"$CONFIRM_UPDATE" != "UPDATE"', '"$CONFIRM_UPDATE" != "ANY"'),
-        ('"$EXPECTED_MAIN_SHA" != "$HEAD_SHA"', '"$EXPECTED_MAIN_SHA" == "$HEAD_SHA"'),
-        ('    permissions:\n      contents: read\n    steps:\n      - name: Checkout pilot configuration', '    permissions:\n      contents: write\n    steps:\n      - name: Checkout pilot configuration'),
-        ('persist-credentials: false', 'persist-credentials: true'),
-        (f'ref: {PIN}', 'ref: main'),
-        ('--action watch', '--action candidate'),
-        ("needs.watch_candidate.result == 'success'", "needs.watch_candidate.result == 'failure'"),
-        (f'uses: pgextwin/build/.github/workflows/candidate-update.yml@{PIN}',
-         'uses: pgextwin/build/.github/workflows/candidate-update.yml@main'),
+    mutations = (
+        ("default: true", "default: false"),
+        ("operator-update-readonly.yml@" + SHARED, "operator-update-readonly.yml@main"),
+        ("      detector_sha: " + PIN, "      detector_sha: main"),
+        ("      dry_run: ${{ inputs.dry_run }}", "      dry_run: false"),
+        ("      expected_main_sha: ${{ inputs.expected_main_sha }}", "      expected_main_sha: 0"),
+        ("    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-readonly.yml",
+         "    permissions:\n      contents: write\n    uses: pgextwin/build/.github/workflows/operator-update-readonly.yml"),
+        ("needs.authorize.outputs.mode == 'candidate'",
+         "needs.authorize.outputs.mode == 'read-only'"),
+        ("needs.watch_candidate.result == 'success'",
+         "needs.watch_candidate.result == 'failure'"),
+        ("uses: pgextwin/build/.github/workflows/candidate-update.yml@" + PIN,
+         "uses: pgextwin/build/.github/workflows/candidate-update.yml@main"),
+        ("uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + PIN,
+         "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@main"),
+        ("      issues: write", "      contents: write"),
+        ("      actions: write", "      actions: read"),
     )
-    for i, (before, after) in enumerate(mutants, 1):
+    for before, after in mutations:
         if before not in src:
-            raise AssertionError('Missing hostile fixture: ' + str(i))
+            raise AssertionError("Missing hostile mutation anchor: " + before[:50])
         try:
             verify(src.replace(before, after, 1))
         except ValueError:
             continue
-        raise AssertionError('Unsafe change accepted: ' + str(i))
-    print(f'PASS: B1 on-demand read-only isolation; {len(mutants)} hostile workflow mutants denied')
+        raise AssertionError("Hostile mutation accepted: " + before[:50])
+    print(f"PASS: delegated B1 immutable call, scoped writer jobs and {len(mutations)} hostile changes denied")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
