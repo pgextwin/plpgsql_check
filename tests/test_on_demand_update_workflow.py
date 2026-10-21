@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "39a329fb5e7c7f801eef3a23688fdd76cce8b2ac"
+SHARED = "eaac18cb195f21294964b4a132c5cfc754a90b62"
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
@@ -63,6 +63,8 @@ def main():
     mutants = (
         ('cron: "30 3 * * *"', 'cron: "* * * * *"'),
         ('operator-update-auto.yml@' + SHARED, 'operator-update-auto.yml@main'),
+        ('operator-update-auto.yml@' + SHARED,
+         'operator-update-auto.yml@39a329fb5e7c7f801eef3a23688fdd76cce8b2ac'),
         ('      detector_sha: ' + PIN, '      detector_sha: main'),
         ('    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml',
          '    permissions:\n      contents: write\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml'),
