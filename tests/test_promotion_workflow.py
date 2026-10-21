@@ -19,12 +19,12 @@ spec.loader.exec_module(policy)
 class PromotionWorkflow(unittest.TestCase):
     def test_existing_manual_dispatch_policy_is_preserved(self):
         self.assertIn("workflow_dispatch:", PROMOTION)
-        self.assertIn("confirm_release:", PROMOTION)
-        self.assertIn("Type PUBLISH", PROMOTION)
+        self.assertNotIn("      confirm_release:\n        description:", PROMOTION)
+        self.assertIn("      confirm_release: PUBLISH", PROMOTION)
         self.assertIn("github.ref == 'refs/heads/main'", PROMOTION)
         self.assertIn("cancel-in-progress: false", PROMOTION)
         for key in ("candidate_pr", "candidate_run_id", "decision_run_id",
-                    "release_tag", "confirm_release"):
+                    "release_tag"):
             self.assertIn(key + ": ${{ inputs." + key + " }}", PROMOTION)
         self.assertNotIn("pull_request_target", PROMOTION)
         self.assertNotIn("gh release ", PROMOTION)
