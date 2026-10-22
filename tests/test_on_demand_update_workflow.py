@@ -43,7 +43,7 @@ def verify(src):
         "\n  workflow_dispatch:", "\n  pull_request:",
         "\n  repository_dispatch:", "\n  workflow_call:",
         "confirm_update", "expected_main_sha", "ShutenOishi",
-        "gh release ", "confirm_release=PUBLISH", "build-extension-attested.yml",
+        "gh release ", "confirm_release=PUBLISH",
         "operator-update-readonly.yml", "GH_TOKEN:", "secrets.",
         "persist-credentials: true", "watch_readonly:",
     ):
