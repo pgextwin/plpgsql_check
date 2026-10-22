@@ -76,6 +76,7 @@ def verify(src):
             raise ValueError("missing pinned read-only main observer " + marker)
     observer = src.split("  candidate_main_merge_observation:\n", 1)[1]
     for prohibited in ("contents: write", "actions: write", "issues: write",
+                       "pull-requests: write",
                        "secrets.", "GH_TOKEN:", "workflow_dispatch", "confirm_release",
                        "gh release ", "ref: main", "persist-credentials: true"):
         if prohibited in observer:
