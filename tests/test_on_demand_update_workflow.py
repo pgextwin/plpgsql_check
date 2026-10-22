@@ -67,20 +67,44 @@ def verify(src):
         "      actions: read",
         "      pull-requests: read",
         "uses: pgextwin/build/.github/workflows/automatic-postmerge-audit-readonly.yml@"
-        + "8a41cedf34108bbb9b07a24ff4ddde42d9621b97",
+        + "e81d9f7b38a949d5b220ab16228ff206a8020992",
     )
     if src.count("  push:\n") != 1 or src.count("  candidate_main_merge_observation:\n") != 1:
         raise ValueError("duplicate or ambiguous read-only observer")
     for marker in required_observer:
         if marker not in src:
             raise ValueError("missing pinned read-only main observer " + marker)
-    observer = src.split("  candidate_main_merge_observation:\n", 1)[1]
+    observer = src.split("  candidate_main_merge_observation:\n", 1)[1].split("\n  candidate_attested_build:\n", 1)[0]
     for prohibited in ("contents: write", "actions: write", "issues: write",
                        "pull-requests: write",
                        "secrets.", "GH_TOKEN:", "workflow_dispatch", "confirm_release",
                        "gh release ", "ref: main", "persist-credentials: true"):
         if prohibited in observer:
             raise ValueError("unsafe observer privilege or mutable Release path")
+    # The attested job is distinct from the read-only observer. It may attest,
+    # but it can never mint a public Release, tag or privilege escalation.
+    if src.count("\n  candidate_attested_build:\n") != 1:
+        raise ValueError("exactly one shared signer job required")
+    signer = src.split("\n  candidate_attested_build:\n", 1)[1]
+    signed_required = (
+        "    needs: candidate_main_merge_observation",
+        "github.event_name == 'push'",
+        "github.ref == 'refs/heads/main'",
+        "needs.candidate_main_merge_observation.result == 'success'",
+        "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
+        "    permissions:\n      contents: read\n      id-token: write\n      attestations: write\n      artifact-metadata: write",
+        "uses: pgextwin/build/.github/workflows/build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d",
+        "extension_config_path: config/extension.json",
+        "test_contract_path: config/test-contract.json",
+    )
+    for marker in signed_required:
+        if marker not in signer:
+            raise ValueError("signed-build gate or immutable source changed: " + marker)
+    for forbidden in ("contents: write", "actions: write", "pull-requests: write",
+                      "secrets.", "workflow_dispatch", "gh release ", "confirm_release",
+                      "publish-release", "catalog", "@main"):
+        if forbidden in signer:
+            raise ValueError("signed-build job gained publication or extraneous permissions")
     watch = src.split("  watch_candidate:\n", 1)[1].split("  candidate:\n", 1)[0]
     candidate = src.split("  candidate:\n", 1)[1]
     if not re.search(r"(?m)^    permissions:\n      contents: read\n      issues: write$", watch):
@@ -93,9 +117,13 @@ def main():
     src = PATH.read_text(encoding="utf-8")
     verify(src)
     mutants = (
+        ("needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
+         "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'false'"),
+        ("build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d", "build-extension-attested.yml@main"),
+        ("      attestations: write", "      attestations: read"),
         ('    branches: [main]', '    branches: [develop]'),
         ('      - "config/extension.json"', '      - ".github/workflows/update-watch.yml"'),
-        ('automatic-postmerge-audit-readonly.yml@8a41cedf34108bbb9b07a24ff4ddde42d9621b97',
+        ('automatic-postmerge-audit-readonly.yml@e81d9f7b38a949d5b220ab16228ff206a8020992',
          'automatic-postmerge-audit-readonly.yml@main'),
         ('      pull-requests: read', '      pull-requests: write'),
         ('cron: "30 3 * * *"', 'cron: "* * * * *"'),
