@@ -120,7 +120,12 @@ def main():
         if before not in src:
             raise AssertionError("missing hostile fixture " + before[:60])
         try:
-            verify(src.replace(before, after, 1))
+            # The native PR audit also legitimately has pull-requests: read.
+            # Mutate the final, exact main-push observer instead of that sibling.
+            altered = (src.rsplit(before, 1)[0] + after + src.rsplit(before, 1)[1]
+                       if before == '      pull-requests: read'
+                       else src.replace(before, after, 1))
+            verify(altered)
         except ValueError:
             continue
         raise AssertionError("unsafe scheduled candidate mutation accepted: " + before[:60])
