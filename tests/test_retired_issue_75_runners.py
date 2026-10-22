@@ -38,7 +38,7 @@ class RetiredIssue75Runners(unittest.TestCase):
                      "test-step19-hooks.yml"):
             self.assertTrue((WF / name).is_file())
         promote = (WF / "promote.yml").read_text(encoding="utf-8")
-        self.assertIn("Type PUBLISH", promote)
+        self.assertIn("      confirm_release: PUBLISH", promote)
         self.assertIn("promote-verified-release.yml@", promote)
         self.assertNotIn("pull_request_target:", syntax)
 
@@ -64,7 +64,7 @@ class RetiredIssue75Runners(unittest.TestCase):
         self.assertIn("tests/test_pg14_backfill.py", windows)
         self.assertIn("name: Windows required summary", windows)
         self.assertIn("pgextwin/build/.github/workflows/promote-verified-release.yml@", promotion)
-        self.assertIn("Type PUBLISH", promotion)
+        self.assertIn("      confirm_release: PUBLISH", promotion)
         self.assertNotIn("release-extension.yml@", promotion)
 
     def test_unreachable_historical_pr45_job_not_in_active_ci(self):

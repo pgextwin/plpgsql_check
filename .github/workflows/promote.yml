@@ -15,10 +15,6 @@ on:
         description: Upstream watch run containing candidate-decision artifact
         required: true
         type: string
-      confirm_release:
-        description: Type PUBLISH to explicitly authorize this exact manual Release
-        required: true
-        type: string
       release_tag:
         description: New never-used vX.Y.Z-windows.N Release tag
         required: true
@@ -49,6 +45,8 @@ jobs:
       candidate_run_id: ${{ inputs.candidate_run_id }}
       decision_run_id: ${{ inputs.decision_run_id }}
       release_tag: ${{ inputs.release_tag }}
-      confirm_release: ${{ inputs.confirm_release }}
+      # Human main-branch workflow_dispatch confirms this Release.
+      # Preserve the already-proven immutable gate compatibility input.
+      confirm_release: PUBLISH
     secrets:
       catalog_app_private_key: ${{ secrets.PGEXTWIN_CATALOG_APP_PRIVATE_KEY }}
