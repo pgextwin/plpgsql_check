@@ -34,7 +34,7 @@ class PromotionWorkflow(unittest.TestCase):
     def test_exact_pinned_shared_promotion_not_inline_privileged_copy(self):
         self.assertIn(
             "pgextwin/build/.github/workflows/promote-verified-release.yml@"
-            "5425225ea858f8c0165421902c3e66c6c9205f60", PROMOTION)
+            "7e3c558b4fa615c356bde074880452111af6c610", PROMOTION)
         self.assertNotIn("fleet-promotion-gate.py", PROMOTION)
         self.assertNotIn("fleet-publish-release.py", PROMOTION)
         self.assertNotIn("release_build:", PROMOTION)
