@@ -85,7 +85,7 @@ def verify(src):
     # but it can never mint a public Release, tag or privilege escalation.
     if src.count("\n  candidate_attested_build:\n") != 1:
         raise ValueError("exactly one shared signer job required")
-    signer = src.split("\n  candidate_attested_build:\n", 1)[1]
+    signer = src.split("\n  candidate_attested_build:\n", 1)[1].split("\n  candidate_signed_audit:\n", 1)[0]
     signed_required = (
         "    needs: candidate_main_merge_observation",
         "github.event_name == 'push'",
@@ -105,6 +105,25 @@ def verify(src):
                       "publish-release", "catalog", "@main"):
         if forbidden in signer:
             raise ValueError("signed-build job gained publication or extraneous permissions")
+    # The new final audit is a separate strictly read-only job, not an
+    # extension of the original signer or an additional Publisher.
+    if src.count("\n  candidate_signed_audit:\n") != 1:
+        raise ValueError("signed candidate auditor must be unique")
+    auditor = src.split("\n  candidate_signed_audit:\n", 1)[1]
+    for required in (
+        "needs: [candidate_main_merge_observation, candidate_attested_build]",
+        "needs.candidate_attested_build.result == 'success'",
+        "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
+        "    permissions:\n      contents: read\n      actions: read\n      attestations: read",
+        "verify-signed-candidate-readonly.yml@8c68c9f962f1d7082d5bf852de928d37c63718c1",
+    ):
+        if required not in auditor:
+            raise ValueError("signed audit missing prior verified BUILD, immutable SHA or READ permissions")
+    for forbidden in ("contents: write", "actions: write", "id-token: write",
+                      "attestations: write", "issues: write", "pull-requests: write",
+                      "secrets.", "workflow_dispatch", "gh release ", "@main"):
+        if forbidden in auditor:
+            raise ValueError("signed audit gained publication or mutable privileges")
     watch = src.split("  watch_candidate:\n", 1)[1].split("  candidate:\n", 1)[0]
     candidate = src.split("  candidate:\n", 1)[1]
     if not re.search(r"(?m)^    permissions:\n      contents: read\n      issues: write$", watch):
