@@ -115,7 +115,7 @@ def verify(src):
         "needs.candidate_attested_build.result == 'success'",
         "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
         "    permissions:\n      contents: read\n      actions: read\n      attestations: read",
-        "verify-signed-candidate-readonly.yml@069eca1a2ac09f01cab86452cf1eb24feda4dfc4",
+        "verify-signed-candidate-readonly.yml@b820cc1df9fcfc1ff07def0af40a985ce1454e46",
     ):
         if required not in auditor:
             raise ValueError("signed audit missing prior verified BUILD, immutable SHA or READ permissions")
@@ -136,7 +136,7 @@ def main():
     src = PATH.read_text(encoding="utf-8")
     verify(src)
     mutants = (
-        ('verify-signed-candidate-readonly.yml@069eca1a2ac09f01cab86452cf1eb24feda4dfc4', 'verify-signed-candidate-readonly.yml@main'),
+        ('verify-signed-candidate-readonly.yml@b820cc1df9fcfc1ff07def0af40a985ce1454e46', 'verify-signed-candidate-readonly.yml@main'),
         ("needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
          "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'false'"),
         ("build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d", "build-extension-attested.yml@main"),
