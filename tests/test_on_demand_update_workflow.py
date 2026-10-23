@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "eaac18cb195f21294964b4a132c5cfc754a90b62"
+SHARED = "bd35b7c702f80568b3bdd2cea235bac9930d095f"
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
