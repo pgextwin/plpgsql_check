@@ -115,7 +115,7 @@ def verify(src):
         "needs.candidate_attested_build.result == 'success'",
         "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
         "    permissions:\n      contents: read\n      actions: read\n      attestations: read",
-        "verify-signed-candidate-readonly.yml@29e9c3445b8097ac504bdb967717fc4ba894ed85",
+        "verify-signed-candidate-readonly.yml@304cd5d473b5b48e56d7988b55630e46d767f6d0",
     ):
         if required not in auditor:
             raise ValueError("signed audit missing prior verified BUILD, immutable SHA or READ permissions")
