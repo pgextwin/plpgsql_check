@@ -10,13 +10,14 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "bd35b7c702f80568b3bdd2cea235bac9930d095f"
+SHARED = "0f8aa92b898d0f9cca2dbf45660293445d96ec4c"
+STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
 def verify(src):
     required = (
-        'on:\n  schedule:\n    - cron: "30 3 * * *"',
+        'on:\n  schedule:\n    - cron: "30 * * * *"',
         "permissions:\n  contents: read",
         "cancel-in-progress: false",
         "  authorize:\n",
@@ -27,8 +28,8 @@ def verify(src):
         "needs: authorize",
         "needs.authorize.outputs.mode == 'candidate'",
         "needs.watch_candidate.result == 'success'",
-        "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + PIN,
-        "uses: pgextwin/build/.github/workflows/candidate-update.yml@" + PIN,
+        "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + STAGE,
+        "uses: pgextwin/build/.github/workflows/candidate-update.yml@" + STAGE,
         "candidate_policy_path: config/candidate-build.json",
     )
     for marker in required:
@@ -146,7 +147,7 @@ def main():
         ('automatic-postmerge-audit-readonly.yml@e81d9f7b38a949d5b220ab16228ff206a8020992',
          'automatic-postmerge-audit-readonly.yml@main'),
         ('      pull-requests: read', '      pull-requests: write'),
-        ('cron: "30 3 * * *"', 'cron: "* * * * *"'),
+        ('cron: "30 * * * *"', 'cron: "* * * * *"'),
         ('operator-update-auto.yml@' + SHARED, 'operator-update-auto.yml@main'),
         ('operator-update-auto.yml@' + SHARED,
          'operator-update-auto.yml@39a329fb5e7c7f801eef3a23688fdd76cce8b2ac'),
@@ -157,9 +158,9 @@ def main():
          "needs.authorize.outputs.mode == 'read-only'"),
         ("needs.watch_candidate.result == 'success'",
          "needs.watch_candidate.result == 'failure'"),
-        ("uses: pgextwin/build/.github/workflows/candidate-update.yml@" + PIN,
+        ("uses: pgextwin/build/.github/workflows/candidate-update.yml@" + STAGE,
          "uses: pgextwin/build/.github/workflows/candidate-update.yml@main"),
-        ("uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + PIN,
+        ("uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + STAGE,
          "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@main"),
         ("      issues: write", "      contents: write"),
         ("      actions: write", "      actions: read"),
