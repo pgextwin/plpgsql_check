@@ -13,7 +13,7 @@ PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 SIGNED_AUDIT_PIN = "a3546d2ff536fc02c0736e687f9a2451460ded26"  # protected build #272
-SCHEDULED_SHARED = "b852a8bbececa3e9f2c3de274db69bc7d0304f46"  # tested protected #255 verifier
+SCHEDULED_SHARED = "c5a3318ac5a777a30dbce6bbfe0f0acb4e2615eb"  # protected #273 expiry-DEFERRED gate
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
@@ -162,6 +162,8 @@ def main():
         ('operator-update-auto.yml@' + SCHEDULED_SHARED, 'operator-update-auto.yml@main'),
         ('operator-update-auto.yml@' + SCHEDULED_SHARED,
          'operator-update-auto.yml@39a329fb5e7c7f801eef3a23688fdd76cce8b2ac'),
+        ('operator-update-auto.yml@' + SCHEDULED_SHARED,
+         'operator-update-auto.yml@b852a8bbececa3e9f2c3de274db69bc7d0304f46'),
         ('      detector_sha: ' + PIN, '      detector_sha: main'),
         ('    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml',
          '    permissions:\n      contents: write\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml'),
