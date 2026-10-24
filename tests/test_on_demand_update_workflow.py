@@ -12,6 +12,7 @@ import re
 PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
+SCHEDULED_SHARED = "b852a8bbececa3e9f2c3de274db69bc7d0304f46"  # tested protected #255 verifier
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
@@ -22,7 +23,7 @@ def verify(src):
         "cancel-in-progress: false",
         "  authorize:\n",
         "    name: Read-only latest 17-fleet success and exact protected main preflight",
-        "    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml@" + SHARED,
+        "    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml@" + SCHEDULED_SHARED,
         "      detector_sha: " + PIN,
         "  watch_candidate:\n", "  candidate:\n",
         "needs: authorize",
@@ -154,8 +155,8 @@ def main():
          'automatic-postmerge-audit-readonly.yml@main'),
         ('      pull-requests: read', '      pull-requests: write'),
         ('cron: "30 * * * *"', 'cron: "* * * * *"'),
-        ('operator-update-auto.yml@' + SHARED, 'operator-update-auto.yml@main'),
-        ('operator-update-auto.yml@' + SHARED,
+        ('operator-update-auto.yml@' + SCHEDULED_SHARED, 'operator-update-auto.yml@main'),
+        ('operator-update-auto.yml@' + SCHEDULED_SHARED,
          'operator-update-auto.yml@39a329fb5e7c7f801eef3a23688fdd76cce8b2ac'),
         ('      detector_sha: ' + PIN, '      detector_sha: main'),
         ('    permissions:\n      contents: read\n    uses: pgextwin/build/.github/workflows/operator-update-auto.yml',
