@@ -111,6 +111,9 @@ def verify(src):
     if src.count("\n  candidate_signed_audit:\n") != 1:
         raise ValueError("signed candidate auditor must be unique")
     auditor = src.split("\n  candidate_signed_audit:\n", 1)[1]
+    # A second reusable caller (even to the same immutable SHA) is ambiguous.
+    if len(re.findall(r"(?m)^\s+uses:\s+", auditor)) != 1:
+        raise ValueError("signed audit must have exactly one reusable workflow caller")
     for required in (
         "needs: [candidate_main_merge_observation, candidate_attested_build]",
         "needs.candidate_attested_build.result == 'success'",
@@ -138,6 +141,9 @@ def main():
     verify(src)
     mutants = (
         ('verify-signed-candidate-readonly.yml@0f8aa92b898d0f9cca2dbf45660293445d96ec4c', 'verify-signed-candidate-readonly.yml@main'),
+        ("verify-signed-candidate-readonly.yml@" + SHARED,
+         "verify-signed-candidate-readonly.yml@" + SHARED
+         + "\n    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@" + SHARED),
         ("needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
          "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'false'"),
         ("build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d", "build-extension-attested.yml@main"),
