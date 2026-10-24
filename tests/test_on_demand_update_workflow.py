@@ -12,6 +12,7 @@ import re
 PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
+SIGNED_AUDIT_PIN = "a3546d2ff536fc02c0736e687f9a2451460ded26"  # protected build #272
 SCHEDULED_SHARED = "b852a8bbececa3e9f2c3de274db69bc7d0304f46"  # tested protected #255 verifier
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
@@ -120,7 +121,7 @@ def verify(src):
         "needs.candidate_attested_build.result == 'success'",
         "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
         "    permissions:\n      contents: read\n      actions: read\n      attestations: read",
-        "verify-signed-candidate-readonly.yml@df9847fa265c06c8f8602a72cfb0fcde52ee46df",
+        "verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
     ):
         if required not in auditor:
             raise ValueError("signed audit missing prior verified BUILD, immutable SHA or READ permissions")
@@ -141,10 +142,13 @@ def main():
     src = PATH.read_text(encoding="utf-8")
     verify(src)
     mutants = (
-        ('verify-signed-candidate-readonly.yml@df9847fa265c06c8f8602a72cfb0fcde52ee46df', 'verify-signed-candidate-readonly.yml@main'),
-        ("verify-signed-candidate-readonly.yml@" + SHARED,
-         "verify-signed-candidate-readonly.yml@" + SHARED
-         + "\n    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@" + SHARED),
+        ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
+         "verify-signed-candidate-readonly.yml@main"),
+        ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
+         "verify-signed-candidate-readonly.yml@" + SHARED),
+        ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
+         "verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN
+         + "\n    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN),
         ("needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
          "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'false'"),
         ("build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d", "build-extension-attested.yml@main"),
