@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "0f8aa92b898d0f9cca2dbf45660293445d96ec4c"
+SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
@@ -119,7 +119,7 @@ def verify(src):
         "needs.candidate_attested_build.result == 'success'",
         "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
         "    permissions:\n      contents: read\n      actions: read\n      attestations: read",
-        "verify-signed-candidate-readonly.yml@0f8aa92b898d0f9cca2dbf45660293445d96ec4c",
+        "verify-signed-candidate-readonly.yml@df9847fa265c06c8f8602a72cfb0fcde52ee46df",
     ):
         if required not in auditor:
             raise ValueError("signed audit missing prior verified BUILD, immutable SHA or READ permissions")
@@ -140,7 +140,7 @@ def main():
     src = PATH.read_text(encoding="utf-8")
     verify(src)
     mutants = (
-        ('verify-signed-candidate-readonly.yml@0f8aa92b898d0f9cca2dbf45660293445d96ec4c', 'verify-signed-candidate-readonly.yml@main'),
+        ('verify-signed-candidate-readonly.yml@df9847fa265c06c8f8602a72cfb0fcde52ee46df', 'verify-signed-candidate-readonly.yml@main'),
         ("verify-signed-candidate-readonly.yml@" + SHARED,
          "verify-signed-candidate-readonly.yml@" + SHARED
          + "\n    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@" + SHARED),
