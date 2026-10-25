@@ -9,6 +9,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "config/extension.json"
 AUDIT = ROOT / "config/export-audit.json"
+REVIEWED_AUDITS = ROOT / "config/export-audits"
 BUILD = ROOT / "windows/ci/build.ps1"
 SHA40 = re.compile(r"^[0-9a-f]{40}$")
 
@@ -32,13 +33,57 @@ def validate(manifest: dict, audit: dict) -> None:
                for s in symbols)
 
 
+def load_reviewed_audit(manifest: dict) -> dict:
+    """Never treat a mutable tag or a different source SHA as reviewed."""
+    legacy = json.loads(AUDIT.read_text(encoding="utf-8"))
+    source_sha = manifest["upstream"]["commit"]
+    if legacy["upstreamCommit"] == source_sha:
+        return legacy
+    if type(source_sha) is not str or not SHA40.fullmatch(source_sha):
+        return legacy  # validate() must reject it
+    source_file = REVIEWED_AUDITS / (source_sha + ".json")
+    if not source_file.is_file():
+        return legacy  # unknown sources must fail the exact source audit
+    reviewed = json.loads(source_file.read_text(encoding="utf-8"))
+    assert reviewed["upstreamCommit"] == source_sha, (
+        "Reviewed SHA-named audit file has mismatched source identity"
+    )
+    return reviewed
+
+
 class SourceSpecificExportAuditTests(unittest.TestCase):
     def setUp(self):
         self.manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-        self.audit = json.loads(AUDIT.read_text(encoding="utf-8"))
+        self.audit = load_reviewed_audit(self.manifest)
 
     def test_real_manifest_exact_source_sha_matches_reviewed_export_audit(self):
         validate(self.manifest, self.audit)
+
+    def test_all_reviewed_successor_audits_are_immutably_source_bound(self):
+        import copy
+        approved_files = sorted(REVIEWED_AUDITS.glob("*.json"))
+        self.assertTrue(approved_files, "No independent reviewed source records")
+        for source_file in approved_files:
+            sha = source_file.stem
+            with self.subTest(sha=sha):
+                self.assertRegex(sha, SHA40)
+                reviewed = json.loads(source_file.read_text(encoding="utf-8"))
+                self.assertEqual(reviewed["upstreamCommit"], sha)
+                candidate = copy.deepcopy(self.manifest)
+                candidate["upstream"]["commit"] = sha
+                validate(candidate, load_reviewed_audit(candidate))
+                self.assertEqual(load_reviewed_audit(candidate), reviewed)
+                wrong = copy.deepcopy(reviewed)
+                wrong["upstreamCommit"] = "e" * 40
+                with self.assertRaises(AssertionError):
+                    validate(candidate, wrong)
+
+    def test_unknown_source_never_inherits_audit_without_review(self):
+        import copy
+        candidate = copy.deepcopy(self.manifest)
+        candidate["upstream"]["commit"] = "f" * 40
+        with self.assertRaises(AssertionError):
+            validate(candidate, load_reviewed_audit(candidate))
 
     def test_stale_moved_or_forged_source_identity_is_denied(self):
         import copy
@@ -69,6 +114,9 @@ class SourceSpecificExportAuditTests(unittest.TestCase):
         self.assertIn("throw 'A new formal release requires a source-specific independent export audit.'", script)
         self.assertIn("Verified $($exports.Count) DLL exports", script)
         self.assertIn("if ($approved.Count -ne 23)", script)
+        self.assertIn("config\\export-audits", script)
+        self.assertIn("($expectedSha + '.json')", script)
+        self.assertIn("if ($reviewedAudit.upstreamCommit -cne $expectedSha)", script)
         self.assertNotIn("$audit.upstreamCommit = $expectedSha", script)
 
 

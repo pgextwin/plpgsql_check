@@ -58,6 +58,18 @@ foreach ($f in $sourceFiles) {
 # The independent list below was audited against the pinned upstream SQL and C
 # sources, not guessed from filenames. It keeps a reviewable export contract.
 $audit = Get-Content (Join-Path $PSScriptRoot '..\..\config\export-audit.json') -Raw | ConvertFrom-Json
+# Independently reviewed successor sources are registered by immutable full SHA.
+# Keep the protected current-main audit unchanged until the candidate is merged.
+if ($audit.upstreamCommit -cne $expectedSha) {
+    $reviewedPath = Join-Path (Join-Path $PSScriptRoot '..\..\config\export-audits') ($expectedSha + '.json')
+    if (Test-Path -LiteralPath $reviewedPath -PathType Leaf) {
+        $reviewedAudit = Get-Content -LiteralPath $reviewedPath -Raw | ConvertFrom-Json
+        if ($reviewedAudit.upstreamCommit -cne $expectedSha) {
+            throw 'Reviewed upstream export audit identity does not match its immutable file name.'
+        }
+        $audit = $reviewedAudit
+    }
+}
 # New candidate builds may reuse the audited export contract only if all symbols still match.
 # Formal attested release requires independent export audit explicitly bound to that source SHA.
 $isCandidate = ($env:GITHUB_REF -like 'refs/heads/auto-candidate/*') -or ($env:GITHUB_EVENT_NAME -eq 'pull_request')
