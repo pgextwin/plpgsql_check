@@ -14,6 +14,7 @@ SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 SIGNED_AUDIT_PIN = "a3546d2ff536fc02c0736e687f9a2451460ded26"  # protected build #272
 SCHEDULED_SHARED = "cad131c1a767756fd8d8933d8a3c8530fd0ab9e3"  # protected build #283 scheduled verifier
+NATIVE_READERS_SHARED = "2b2903e463d28891b5688bf4546da99a299c3684"  # protected build #284 Contents/Check Runs repair
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
@@ -70,7 +71,7 @@ def verify(src):
         "      actions: read",
         "      pull-requests: read",
         "uses: pgextwin/build/.github/workflows/automatic-postmerge-audit-readonly.yml@"
-        + "e81d9f7b38a949d5b220ab16228ff206a8020992",
+        + NATIVE_READERS_SHARED,
     )
     if src.count("  push:\n") != 1 or src.count("  candidate_main_merge_observation:\n") != 1:
         raise ValueError("duplicate or ambiguous read-only observer")
@@ -84,6 +85,17 @@ def verify(src):
                        "gh release ", "ref: main", "persist-credentials: true"):
         if prohibited in observer:
             raise ValueError("unsafe observer privilege or mutable Release path")
+    for name, following, workflow in (
+        ("candidate_native_pr_audit", "candidate_main_merge_observation", "verify-native-pr-candidate.yml"),
+        ("candidate_main_merge_observation", "candidate_attested_build", "automatic-postmerge-audit-readonly.yml"),
+    ):
+        reader = src.split("  " + name + ":\n", 1)[1].split("\n  " + following + ":\n", 1)[0]
+        perms = reader.split("    permissions:\n", 1)[1].split("    uses:", 1)[0]
+        actual = dict(re.findall(r"^      ([a-z-]+): ([a-z]+)$", perms, re.M))
+        if actual != {"contents": "read", "actions": "read", "pull-requests": "read", "checks": "read"}:
+            raise ValueError("native reader must have exact read-only Check Runs access")
+        if workflow + "@" + NATIVE_READERS_SHARED not in reader:
+            raise ValueError("native reader shared repair pin missing")
     # The attested job is distinct from the read-only observer. It may attest,
     # but it can never mint a public Release, tag or privilege escalation.
     if src.count("\n  candidate_attested_build:\n") != 1:
@@ -142,6 +154,10 @@ def main():
     src = PATH.read_text(encoding="utf-8")
     verify(src)
     mutants = (
+        ('      checks: read', '      checks: write'),
+        ('      checks: read', ''),
+        ('verify-native-pr-candidate.yml@' + NATIVE_READERS_SHARED,
+         'verify-native-pr-candidate.yml@main'),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
          "verify-signed-candidate-readonly.yml@main"),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
@@ -155,7 +171,7 @@ def main():
         ("      attestations: write", "      attestations: read"),
         ('    branches: [main]', '    branches: [develop]'),
         ('      - "config/extension.json"', '      - ".github/workflows/update-watch.yml"'),
-        ('automatic-postmerge-audit-readonly.yml@e81d9f7b38a949d5b220ab16228ff206a8020992',
+        ('automatic-postmerge-audit-readonly.yml@' + NATIVE_READERS_SHARED,
          'automatic-postmerge-audit-readonly.yml@main'),
         ('      pull-requests: read', '      pull-requests: write'),
         ('cron: "30 * * * *"', 'cron: "* * * * *"'),
