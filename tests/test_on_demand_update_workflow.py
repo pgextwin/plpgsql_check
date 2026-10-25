@@ -14,7 +14,8 @@ SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 SIGNED_AUDIT_PIN = "a3546d2ff536fc02c0736e687f9a2451460ded26"  # protected build #272
 SCHEDULED_SHARED = "cad131c1a767756fd8d8933d8a3c8530fd0ab9e3"  # protected build #283 scheduled verifier
-NATIVE_READERS_SHARED = "2b2903e463d28891b5688bf4546da99a299c3684"  # protected build #284 Contents/Check Runs repair
+NATIVE_READERS_SHARED = "2b2903e463d28891b5688bf4546da99a299c3684"  # unchanged protected postmerge observer
+NATIVE_PR_AUDIT_SHARED = "90755b0968520528c74e95a29207836806e543fa"  # protected build #287 exact original PR association
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
@@ -94,8 +95,10 @@ def verify(src):
         actual = dict(re.findall(r"^      ([a-z-]+): ([a-z]+)$", perms, re.M))
         if actual != {"contents": "read", "actions": "read", "pull-requests": "read", "checks": "read"}:
             raise ValueError("native reader must have exact read-only Check Runs access")
-        if workflow + "@" + NATIVE_READERS_SHARED not in reader:
-            raise ValueError("native reader shared repair pin missing")
+        expected = (NATIVE_PR_AUDIT_SHARED if name == "candidate_native_pr_audit"
+                    else NATIVE_READERS_SHARED)
+        if workflow + "@" + expected not in reader:
+            raise ValueError("native reader immutable exact-role repair pin missing")
     # The attested job is distinct from the read-only observer. It may attest,
     # but it can never mint a public Release, tag or privilege escalation.
     if src.count("\n  candidate_attested_build:\n") != 1:
@@ -156,8 +159,10 @@ def main():
     mutants = (
         ('      checks: read', '      checks: write'),
         ('      checks: read', ''),
-        ('verify-native-pr-candidate.yml@' + NATIVE_READERS_SHARED,
+        ('verify-native-pr-candidate.yml@' + NATIVE_PR_AUDIT_SHARED,
          'verify-native-pr-candidate.yml@main'),
+        ('verify-native-pr-candidate.yml@' + NATIVE_PR_AUDIT_SHARED,
+         'verify-native-pr-candidate.yml@' + NATIVE_READERS_SHARED),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
          "verify-signed-candidate-readonly.yml@main"),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
