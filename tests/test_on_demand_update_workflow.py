@@ -13,7 +13,7 @@ PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 SIGNED_AUDIT_PIN = "a3546d2ff536fc02c0736e687f9a2451460ded26"  # protected build #272
-SCHEDULED_SHARED = "c5a3318ac5a777a30dbce6bbfe0f0acb4e2615eb"  # protected #273 expiry-DEFERRED gate
+SCHEDULED_SHARED = "cad131c1a767756fd8d8933d8a3c8530fd0ab9e3"  # protected build #283 scheduled verifier
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
