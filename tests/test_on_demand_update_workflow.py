@@ -10,12 +10,12 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "df9847fa265c06c8f8602a72cfb0fcde52ee46df"
+SHARED = "bf5ce09746f4ff6cf439ac1571a9c2646983fdcc"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
-SIGNED_AUDIT_PIN = "a3546d2ff536fc02c0736e687f9a2451460ded26"  # protected build #272
-SCHEDULED_SHARED = "90755b0968520528c74e95a29207836806e543fa"  # protected current build source, strict scheduled verifier
-NATIVE_READERS_SHARED = "2b2903e463d28891b5688bf4546da99a299c3684"  # unchanged protected postmerge observer
-NATIVE_PR_AUDIT_SHARED = "90755b0968520528c74e95a29207836806e543fa"  # protected build #287 exact original PR association
+SIGNED_AUDIT_PIN = SHARED  # exact protected central publication policy; signer stays independently pinned
+SCHEDULED_SHARED = SHARED  # current protected central policy, strict scheduled verifier
+NATIVE_READERS_SHARED = SHARED  # same reviewed protected policy, exact read-only observer
+NATIVE_PR_AUDIT_SHARED = SHARED  # original PR association stays independently enforced
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
 
 
@@ -162,11 +162,11 @@ def main():
         ('verify-native-pr-candidate.yml@' + NATIVE_PR_AUDIT_SHARED,
          'verify-native-pr-candidate.yml@main'),
         ('verify-native-pr-candidate.yml@' + NATIVE_PR_AUDIT_SHARED,
-         'verify-native-pr-candidate.yml@' + NATIVE_READERS_SHARED),
+         'verify-native-pr-candidate.yml@2b2903e463d28891b5688bf4546da99a299c3684'),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
          "verify-signed-candidate-readonly.yml@main"),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
-         "verify-signed-candidate-readonly.yml@" + SHARED),
+         "verify-signed-candidate-readonly.yml@a3546d2ff536fc02c0736e687f9a2451460ded26"),
         ("verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN,
          "verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN
          + "\n    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN),

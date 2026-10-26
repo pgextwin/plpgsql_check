@@ -71,10 +71,20 @@ class GoAOfflinePolicy(unittest.TestCase):
         self.assertEqual(policy.CENTRAL_MAIN_PIN,
                          "dfa87e91aa0a65ceaec04cdfc67a3053f87baf75")
         stale = '{"protected":true,"commit":{"sha":"c6b7af192635c304b16edc8c7b9c1396b2cd025e"}}'
-        with patch.object(policy, "gh", return_value=stale):
+        # This archived one-shot GO A canary must remain inert after the
+        # protected local policy moves to automatic-signed-schedule.
+        # Reject before any remote GET; do not reauthorize the old canary.
+        with patch.object(policy, "gh", side_effect=AssertionError("retired GO A must not GET")):
             with self.assertRaisesRegex(policy.Deny,
-                                        "central protected main moved since GO A authorization"):
+                                        "pilot-local publication policy changed"):
                 policy.policy_readonly()
+        # Preserve the independent historical negative test: even under a
+        # synthetic manual-only fixture, an obsolete central main is denied.
+        with patch.object(Path, "read_text", return_value='{"releasePolicy":"manual-dispatch"}'):
+            with patch.object(policy, "gh", return_value=stale):
+                with self.assertRaisesRegex(policy.Deny,
+                                            "central protected main moved since GO A authorization"):
+                    policy.policy_readonly()
 
     def test_only_dispatch_and_guarded_main_single_attempt(self):
         self.assertRegex(CANARY, r"(?m)^on:\n  workflow_dispatch:")
