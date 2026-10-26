@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "bf5ce09746f4ff6cf439ac1571a9c2646983fdcc"
+SHARED = "9ec4dde0b6defabc10cf3527c06cb69c13e5a7ff"
 STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
 SIGNED_AUDIT_PIN = SHARED  # exact protected central publication policy; signer stays independently pinned
 SCHEDULED_SHARED = SHARED  # current protected central policy, strict scheduled verifier
