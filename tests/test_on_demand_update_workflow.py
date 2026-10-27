@@ -127,7 +127,8 @@ def verify(src):
     # extension of the original signer or an additional Publisher.
     if src.count("\n  candidate_signed_audit:\n") != 1:
         raise ValueError("signed candidate auditor must be unique")
-    auditor = src.split("\n  candidate_signed_audit:\n", 1)[1]
+    auditor = src.split("\n  candidate_signed_audit:\n", 1)[1].split(
+        "\n  merged_candidate_scheduled_oidc:\n", 1)[0]
     # A second reusable caller (even to the same immutable SHA) is ambiguous.
     if len(re.findall(r"(?m)^\s+uses:\s+", auditor)) != 1:
         raise ValueError("signed audit must have exactly one reusable workflow caller")
@@ -145,6 +146,30 @@ def verify(src):
                       "secrets.", "workflow_dispatch", "gh release ", "@main"):
         if forbidden in auditor:
             raise ValueError("signed audit gained publication or mutable privileges")
+    # Independent nonpublishing scheduled requalification is NOT a second
+    # legacy main/push signed-auditor caller; validate it separately.
+    if src.count("\n  merged_candidate_scheduled_oidc:\n") != 1:
+        raise ValueError("exactly one isolated merged candidate signing lane required")
+    merged = src.split("\n  merged_candidate_scheduled_oidc:\n", 1)[1]
+    required_merged = (
+        "needs: authorize",
+        "github.event_name == 'schedule'",
+        "github.ref == 'refs/heads/main'",
+        "needs.authorize.result == 'success'",
+        "needs.authorize.outputs.mode == 'none'",
+        "    permissions:\n      contents: read\n      actions: read\n      checks: read\n      pull-requests: read\n      id-token: write\n      attestations: write\n      artifact-metadata: write",
+        "uses: pgextwin/build/.github/workflows/requalify-merged-candidate-signed.yml@12e9c809d963c82735e23680ac1838693a6de356",
+    )
+    for marker in required_merged:
+        if marker not in merged:
+            raise ValueError("merged schedule signer immutable safety contract drift: " + marker)
+    if len(re.findall(r"(?m)^    uses:\s+", merged)) != 1:
+        raise ValueError("merged signer has ambiguous reusable callers")
+    for unsafe in ("contents: write", "actions: write", "pull-requests: write",
+                   "workflow_dispatch", "gh release", "secrets.", "GH_TOKEN:",
+                   "confirm_release", "publish-release", "@main"):
+        if unsafe in merged:
+            raise ValueError("merged signer added publication privilege")
     watch = src.split("  watch_candidate:\n", 1)[1].split("  candidate:\n", 1)[0]
     candidate = src.split("  candidate:\n", 1)[1]
     if not re.search(r"(?m)^    permissions:\n      contents: read\n      issues: write$", watch):
@@ -200,6 +225,12 @@ def main():
          "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@main"),
         ("      issues: write", "      contents: write"),
         ("      actions: write", "      actions: read"),
+        ("requalify-merged-candidate-signed.yml@12e9c809d963c82735e23680ac1838693a6de356",
+         "requalify-merged-candidate-signed.yml@main"),
+        ("needs.authorize.outputs.mode == 'none'",
+         "needs.authorize.outputs.mode == 'candidate'"),
+        ("\n  merged_candidate_scheduled_oidc:\n",
+         "\n  unapproved_schedule_signer:\n"),
         ("  schedule:\n", "  workflow_dispatch:\n"),
     )
     for before, after in mutants:
@@ -208,9 +239,13 @@ def main():
         try:
             # The native PR audit also legitimately has pull-requests: read.
             # Mutate the final, exact main-push observer instead of that sibling.
-            altered = (src.rsplit(before, 1)[0] + after + src.rsplit(before, 1)[1]
-                       if before == '      pull-requests: read'
-                       else src.replace(before, after, 1))
+            if before == '      pull-requests: read':
+                # Target legacy read-only main observer, not new signer.
+                observer_at = src.index("  candidate_main_merge_observation:\n")
+                at = src.index(before, observer_at)
+                altered = src[:at] + after + src[at + len(before):]
+            else:
+                altered = src.replace(before, after, 1)
             verify(altered)
         except ValueError:
             continue
