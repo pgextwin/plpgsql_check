@@ -11,9 +11,9 @@ import re
 
 PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "9ec4dde0b6defabc10cf3527c06cb69c13e5a7ff"
-STAGE = SHARED  # central shared candidate workflows; independent detector cohort PIN below
+STAGE = "dbf7365ae702ddc19e094205f8343ec555125d9c"  # verified six-blob scheduled closure; non-schedule audit pins remain separate
 SIGNED_AUDIT_PIN = SHARED  # exact protected central publication policy; signer stays independently pinned
-SCHEDULED_SHARED = SHARED  # current protected central policy, strict scheduled verifier
+SCHEDULED_SHARED = STAGE  # all three scheduled-only callers share the reviewed closure
 NATIVE_READERS_SHARED = SHARED  # same reviewed protected policy, exact read-only observer
 NATIVE_PR_AUDIT_SHARED = SHARED  # original PR association stays independently enforced
 PIN = "16b886b9d06d6f389b369b87ce0c155767697ca0"
@@ -181,6 +181,8 @@ def main():
         ('      pull-requests: read', '      pull-requests: write'),
         ('cron: "30 * * * *"', 'cron: "* * * * *"'),
         ('operator-update-auto.yml@' + SCHEDULED_SHARED, 'operator-update-auto.yml@main'),
+        ('operator-update-auto.yml@' + SCHEDULED_SHARED,
+         'operator-update-auto.yml@' + SHARED),
         ('operator-update-auto.yml@' + SCHEDULED_SHARED,
          'operator-update-auto.yml@39a329fb5e7c7f801eef3a23688fdd76cce8b2ac'),
         ('operator-update-auto.yml@' + SCHEDULED_SHARED,
