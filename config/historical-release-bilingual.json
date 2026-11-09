@@ -116,7 +116,7 @@
       "publishedAt": "2026-10-11T10:46:26Z",
       "prerelease": false,
       "oldBody": "# plpgsql_check Windows x64\r\n\r\nUnofficial binaries built from reviewed upstream SHA ccdbcce9de51f01e1138c270aeb9fe4e26c6e911. PG14–18 tested (maintained majors only); SPDX SBOM, Grype report, signed provenance, signed SBOM and SHA256SUMS included.\r\n非公式Windows x64バイナリです。対応するPG14〜18と検証可能な証明を含みます。\r\n",
-      "newBody": "# plpgsql_check Windows x64\n\n## English\n\nUnofficial binaries built from reviewed upstream SHA ccdbcce9de51f01e1138c270aeb9fe4e26c6e911. PG14–18 tested (maintained majors only); SPDX SBOM, Grype report, signed provenance, signed SBOM and SHA256SUMS included.\n\n## 日本語\n\n非公式Windows x64バイナリです。対応するPG14〜18と検証可能な証明を含みます。\n\n上流で確認したソースコミット`ccdbcce9de51f01e1138c270aeb9fe4e26c6e911`を固定してビルドした非公式Windows x64用`plpgsql_check`バイナリです。公開当時の対象であるPostgreSQL 14～18の各バージョンでスモークテストを実施しました。SPDX形式SBOM、Grype脆弱性レポート（通知のみ）、署名付きビルド来歴、署名付きSBOMのAttestation、SHA256SUMSを同梱しています。これらはReleaseに付属する検証証跡であり、ゼロリスク・インストール自動承認を意味しません。\n",
+      "newBody": "# plpgsql_check Windows x64\n\n## English\n\nUnofficial binaries built from reviewed upstream SHA ccdbcce9de51f01e1138c270aeb9fe4e26c6e911. PG14–18 tested (maintained majors only); SPDX SBOM, Grype report, signed provenance, signed SBOM and SHA256SUMS included.\n\n## 日本語\n\n非公式Windows x64バイナリです。対応するPG14〜18と検証可能な証明を含みます。\n\n上流で確認したソースコミット`ccdbcce9de51f01e1138c270aeb9fe4e26c6e911`を固定してビルドした非公式Windows x64用`plpgsql_check`バイナリです。公開当時の対象であるPostgreSQL 14～18の各メジャーバージョンでスモークテストを実施しました。SPDX形式SBOM、Grype脆弱性レポート（通知のみ）、署名付きビルド来歴、署名付きSBOMのAttestation、SHA256SUMSを同梱しています。これらはReleaseに付属する検証証跡であり、リスクがないことやインストールの自動承認を意味しません。\n",
       "assets": [
         {
           "id": 630346387,

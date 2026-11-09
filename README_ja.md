@@ -12,10 +12,10 @@
 
 1. PostgreSQL環境のバックアップを取り、[上流ドキュメント](https://github.com/okbob/plpgsql_check)で導入要件を確認します。
 2. 既存ファイルの置き換え前にPostgreSQLを停止します。対応するZIPに含まれるlib/とshare/extension/以下を、PostgreSQLの同名ディレクトリに配置します。
-3. PostgreSQLを起動し、利用するデータベースでCREATE EXTENSION plpgsql_check;を実行します。
-4. 関数の検査方法と必要に応じた実行時プロファイリング設定は、上流ドキュメントを参照してください。 本番環境への導入前に検証環境で動作を確認してください。
+3. PostgreSQLを起動し、利用するデータベースで`CREATE EXTENSION plpgsql_check;`を実行します。
+4. 関数の検査方法と必要に応じた実行時プロファイリング設定は、上流ドキュメントを参照してください。本番環境に導入する前に、検証環境で動作を確認してください。
 
-ダウンロードしたZIPはReleaseのSHA256SUMS.txtで照合できます。SPDX形式のSBOM、脆弱性レポート、署名付き証明の提供状況はReleaseで確認できます。
+ダウンロードしたZIPは、Releaseに掲載された`SHA256SUMS.txt`と照合できます。SPDX形式のSBOM、脆弱性レポート、署名付き証明の提供状況はReleaseで確認できます。
 
 ## ライセンス
 
