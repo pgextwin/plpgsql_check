@@ -13,10 +13,10 @@ PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "9ec4dde0b6defabc10cf3527c06cb69c13e5a7ff"
 STAGE = "dbf7365ae702ddc19e094205f8343ec555125d9c"  # verified six-blob scheduled closure; non-schedule audit pins remain separate
 SIGNED_AUDIT_PIN = SHARED  # exact protected central publication policy; signer stays independently pinned
-SCHEDULED_SHARED = "ecc2850520dd286ae92984abee41e89ecef44ae1"  # read-only central receipt pin; candidate writers stay STAGE
+SCHEDULED_SHARED = "73ab3248aa6e15fc150d86f1e118ca1cc036e020"  # read-only central receipt pin; candidate writers stay STAGE
 NATIVE_READERS_SHARED = SHARED  # same reviewed protected policy, exact read-only observer
 NATIVE_PR_AUDIT_SHARED = SHARED  # original PR association stays independently enforced
-PIN = "ecc2850520dd286ae92984abee41e89ecef44ae1"
+PIN = "73ab3248aa6e15fc150d86f1e118ca1cc036e020"
 
 
 def verify(src):
