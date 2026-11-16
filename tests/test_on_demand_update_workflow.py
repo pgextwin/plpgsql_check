@@ -21,7 +21,7 @@ PIN = "73ab3248aa6e15fc150d86f1e118ca1cc036e020"
 
 def verify(src):
     required = (
-        'on:\n  schedule:\n    - cron: "30 * * * *"',
+        'on:\n  schedule:\n    - cron: "35 * * * *"',
         "permissions:\n  contents: read",
         "cancel-in-progress: false",
         "  authorize:\n",
@@ -204,7 +204,7 @@ def main():
         ('automatic-postmerge-audit-readonly.yml@' + NATIVE_READERS_SHARED,
          'automatic-postmerge-audit-readonly.yml@main'),
         ('      pull-requests: read', '      pull-requests: write'),
-        ('cron: "30 * * * *"', 'cron: "* * * * *"'),
+        ('cron: "35 * * * *"', 'cron: "* * * * *"'),
         ('operator-update-auto.yml@' + SCHEDULED_SHARED, 'operator-update-auto.yml@main'),
         ('operator-update-auto.yml@' + SCHEDULED_SHARED,
          'operator-update-auto.yml@' + SHARED),
