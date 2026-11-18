@@ -10,6 +10,13 @@ $ErrorActionPreference = 'Stop'
 $manifest = Get-Content (Join-Path $PSScriptRoot '..\..\config\extension.json') -Raw | ConvertFrom-Json
 $expectedSha = [string]$manifest.upstream.commit
 $expectedVersion = [string]$manifest.upstream.version
+# The SQL extension version is the release version's major.minor; it is
+# cross-checked against the real upstream control file below, never assumed.
+$versionParts = $expectedVersion -split '\.'
+if ($versionParts.Count -ne 3 -or $versionParts[0] -notmatch '^\d+$' -or $versionParts[1] -notmatch '^\d+$') {
+    throw "Unexpected upstream version format: $expectedVersion"
+}
+$sqlVersion = "$($versionParts[0]).$($versionParts[1])"
 if ($expectedSha -cnotmatch '^[0-9a-f]{40}$' -or $manifest.upstream.repository -cne 'okbob/plpgsql_check') {
     throw 'Missing or malformed pinned upstream identity.'
 }
@@ -28,10 +35,10 @@ $pgMajor = [int]$Matches[1]
 $controlPath = Join-Path $UpstreamDir 'plpgsql_check.control'
 $control = Get-Content $controlPath -Raw
 $controlMatch = [regex]::Match($control, "(?m)^default_version\s*=\s*'([^']+)'")
-if (-not $controlMatch.Success -or $controlMatch.Groups[1].Value -ne '2.10') {
-    throw 'Expected upstream SQL default_version 2.10 was not found; aborting.'
+if (-not $controlMatch.Success -or $controlMatch.Groups[1].Value -ne $sqlVersion) {
+    throw "Expected upstream SQL default_version $sqlVersion was not found; aborting."
 }
-$sqlPath = Join-Path $UpstreamDir 'plpgsql_check--2.10.sql'
+$sqlPath = Join-Path $UpstreamDir "plpgsql_check--$sqlVersion.sql"
 if (-not (Test-Path $sqlPath)) { throw 'The control-required SQL install script is missing.' }
 $mesonPath = Join-Path $UpstreamDir 'meson.build'
 $meson = Get-Content $mesonPath -Raw
@@ -77,7 +84,7 @@ if (-not $isCandidate -and $audit.upstreamCommit -cne $expectedSha) {
     throw 'A new formal release requires a source-specific independent export audit.'
 }
 if ($audit.schemaVersion -ne 1 -or
-    $audit.sqlExtensionVersion -cne '2.10' -or
+    $audit.sqlExtensionVersion -cne $sqlVersion -or
     $audit.moduleMagicExport -cne 'Pg_magic_func' -or
     $audit.moduleInitializerExport -cne '_PG_init') {
     throw 'Independent export audit metadata does not match pinned upstream.'

@@ -7,7 +7,13 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $control = Join-Path $UpstreamDir 'plpgsql_check.control'
-$sql = Join-Path $UpstreamDir 'plpgsql_check--2.10.sql'
+# The SQL extension version comes from the real upstream control file, never
+# from a hardcoded literal.
+$controlText = Get-Content $control -Raw
+$controlMatch = [regex]::Match($controlText, "(?m)^default_version\s*=\s*'([^']+)'")
+if (-not $controlMatch.Success) { throw 'Upstream control default_version was not found.' }
+$sqlVersion = $controlMatch.Groups[1].Value
+$sql = Join-Path $UpstreamDir "plpgsql_check--$sqlVersion.sql"
 $dll = Join-Path $UpstreamDir 'plpgsql_check.dll'
 foreach ($file in @($control, $sql, $dll)) {
     if (-not (Test-Path $file -PathType Leaf)) { throw "Required installation file missing: $file" }
@@ -21,7 +27,7 @@ if (-not (Test-Path $targetExtension)) { throw "Missing PostgreSQL extension pat
 Copy-Item $dll (Join-Path $PgRoot 'lib\plpgsql_check.dll') -Force
 Copy-Item $control (Join-Path $targetExtension 'plpgsql_check.control') -Force
 $upgradeScripts = @(Get-ChildItem $UpstreamDir -File -Filter 'plpgsql_check--*.sql')
-if (-not ($upgradeScripts.Name -contains 'plpgsql_check--2.10.sql')) { throw 'Missing install SQL.' }
+if (-not ($upgradeScripts.Name -contains "plpgsql_check--$sqlVersion.sql")) { throw 'Missing install SQL.' }
 foreach ($file in $upgradeScripts) {
     Copy-Item $file.FullName (Join-Path $targetExtension $file.Name) -Force
 }
