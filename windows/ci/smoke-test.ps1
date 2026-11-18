@@ -50,14 +50,23 @@ try {
     }
     if (-not $ready) { throw 'Temporary PostgreSQL server did not reach ready state.' }
 
+    # The expected SQL version comes from the installed control file — the
+    # same file CREATE EXTENSION reads — never from a hardcoded literal.
+    $installedControl = Join-Path $PgRoot 'share\extension\plpgsql_check.control'
+    if (-not (Test-Path $installedControl -PathType Leaf)) { throw "Installed control file missing: $installedControl" }
+    $installedControlText = Get-Content $installedControl -Raw
+    $installedVersionMatch = [regex]::Match($installedControlText, "(?m)^default_version\s*=\s*'([^']+)'")
+    if (-not $installedVersionMatch.Success) { throw 'Installed control default_version was not found.' }
+    $expectedSqlVersion = $installedVersionMatch.Groups[1].Value
+
     # Validate the SQL diagnostic itself; a mere SQL failure never counts as a pass.
-    @'
+    $verifySql = @'
 \set ON_ERROR_STOP on
 CREATE EXTENSION plpgsql_check;
 DO $verify$
 BEGIN
   IF (SELECT extversion FROM pg_extension WHERE extname = 'plpgsql_check')
-      IS DISTINCT FROM '2.10' THEN
+      IS DISTINCT FROM '__EXPECTED_SQL_VERSION__' THEN
     RAISE EXCEPTION 'Unexpected plpgsql_check SQL extension version';
   END IF;
 END
@@ -114,7 +123,9 @@ END $$;
 DROP FUNCTION public.pgextwin_plpgsql_check_bad();
 DROP TABLE public.pgextwin_plpgsql_check_probe;
 DROP EXTENSION plpgsql_check;
-'@ | Set-Content $sqlPath -Encoding utf8
+'@
+    $verifySql = $verifySql.Replace('__EXPECTED_SQL_VERSION__', $expectedSqlVersion)
+    $verifySql | Set-Content $sqlPath -Encoding utf8
 
     & $psql -X -w -h 127.0.0.1 -p $PgPort -U postgres -d postgres -v ON_ERROR_STOP=1 -f $sqlPath
     if ($LASTEXITCODE -ne 0) { throw "detect-invalid-record-field SQL assertions failed with psql code $LASTEXITCODE" }

@@ -23,7 +23,20 @@ def validate(manifest: dict, audit: dict) -> None:
     assert audit["upstreamCommit"] == source["commit"], (
         "Unreviewed upstream change must not reuse a previous export audit"
     )
-    assert audit["schemaVersion"] == 1 and audit["sqlExtensionVersion"] == "2.10"
+    # The SQL extension version is the pinned release version's major.minor
+    # (2.10.x -> "2.10", 2.11.0 -> "2.11"). The live-manifest binding is
+    # checked here against the real manifest; build.ps1 cross-checks the same
+    # value against the real upstream control file at build time.
+    version = source["version"]
+    assert type(version) is str
+    parts = version.split(".")
+    assert len(parts) == 3 and all(p.isdigit() for p in parts), (
+        "Unexpected upstream version format"
+    )
+    expected_sql_version = ".".join(parts[:2])
+    assert audit["schemaVersion"] == 1 and audit["sqlExtensionVersion"] == expected_sql_version, (
+        "Export audit SQL version does not match the pinned upstream version"
+    )
     assert audit["moduleMagicExport"] == "Pg_magic_func"
     assert audit["moduleInitializerExport"] == "_PG_init"
     symbols = audit["requiredSqlSymbols"]
@@ -71,6 +84,13 @@ class SourceSpecificExportAuditTests(unittest.TestCase):
                 self.assertEqual(reviewed["upstreamCommit"], sha)
                 candidate = copy.deepcopy(self.manifest)
                 candidate["upstream"]["commit"] = sha
+                # This test binds each reviewed audit to its exact source SHA.
+                # The SQL-version binding for the live manifest is checked by
+                # test_real_manifest... (real manifest version) and by build.ps1
+                # (real control file), so derive the candidate version from the
+                # audit's own declared SQL version here to keep older audits
+                # validating under the same rule.
+                candidate["upstream"]["version"] = reviewed["sqlExtensionVersion"] + ".0"
                 validate(candidate, load_reviewed_audit(candidate))
                 self.assertEqual(load_reviewed_audit(candidate), reviewed)
                 wrong = copy.deepcopy(reviewed)
