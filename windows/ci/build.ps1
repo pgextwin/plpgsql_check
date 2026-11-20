@@ -27,8 +27,8 @@ if ($LASTEXITCODE -ne 0 -or $actualSha -cne $expectedSha) {
 $pgConfig = Join-Path $PgRoot 'bin\pg_config.exe'
 if (-not (Test-Path $pgConfig)) { throw "Missing pg_config: $pgConfig" }
 $pgVersion = (& $pgConfig --version).Trim()
-if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^PostgreSQL\s+(1[4-8])(?:\.|\s)') {
-    throw "Only PG14-18 are approved for this pilot: $pgVersion"
+if ($LASTEXITCODE -ne 0 -or $pgVersion -notmatch '^PostgreSQL\s+(1[4-9])(?:\.|\s)') {
+    throw "Only PG14-19 are approved for this pilot: $pgVersion"
 }
 $pgMajor = [int]$Matches[1]
 
@@ -139,12 +139,16 @@ $buildCmd = Join-Path $tempRoot 'plpgsql-check-build.cmd'
 $dumpCmd = Join-Path $tempRoot 'plpgsql-check-dump.cmd'
 try {
     if (Test-Path $buildDir) { Remove-Item $buildDir -Recurse -Force }
+    # PG19 headers use C11 constructs (_Noreturn/alignas); Meson's default C
+    # mode rejects them, so request C11 explicitly for PG>=19 (pg_ivm precedent).
+    $mesonStdArg = ''
+    if ($pgMajor -ge 19) { $mesonStdArg = ' -Dc_std=c11' }
     @"
 @echo off
 call "$devCmd" -arch=x64 -host_arch=x64
 if errorlevel 1 exit /b %errorlevel%
 set "PATH=$PgRoot\bin;%PATH%"
-"$python" -m mesonbuild.mesonmain setup "$buildDir" "$UpstreamDir" --backend ninja --buildtype=plain
+"$python" -m mesonbuild.mesonmain setup "$buildDir" "$UpstreamDir" --backend ninja --buildtype=plain$mesonStdArg
 if errorlevel 1 exit /b %errorlevel%
 "$python" -m mesonbuild.mesonmain compile -C "$buildDir"
 if errorlevel 1 exit /b %errorlevel%
