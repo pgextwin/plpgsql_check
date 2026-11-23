@@ -84,7 +84,11 @@ def api(path):
 
 
 def policy_readonly():
-    local = parse(Path("config/release-promotion.json").read_text(encoding="utf-8"))
+    # Preserve the retired canary's deny-before-GET check.
+    historical_policy = Path(__file__).resolve().parents[1] / (
+        "tests/fixtures/historical-release-promotion-automatic-signed-schedule.json"
+    )
+    local = parse(historical_policy.read_text(encoding="utf-8"))
     need(local.get("releasePolicy") == "manual-dispatch",
          "pilot-local publication policy changed")
     central_head = parse(gh("api", "--method", "GET",

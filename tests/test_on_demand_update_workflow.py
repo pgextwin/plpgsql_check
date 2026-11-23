@@ -12,7 +12,7 @@ import re
 PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "9ec4dde0b6defabc10cf3527c06cb69c13e5a7ff"
 STAGE = "3e5300afa99b99ea8c11be2a6ef75c994d708c28"  # verified six-blob scheduled closure; non-schedule audit pins remain separate
-SIGNED_AUDIT_PIN = SHARED  # exact protected central publication policy; signer stays independently pinned
+SIGNED_AUDIT_PIN = "0ba07c7ad9fdbf20afba0a10264ecadb01ecc3df"  # B5 signed-audit pin advance
 SCHEDULED_SHARED = "3e5300afa99b99ea8c11be2a6ef75c994d708c28"  # read-only central receipt pin; candidate writers stay STAGE
 NATIVE_READERS_SHARED = "7788623fa49e56b1301090bea4f023ea86405657"  # J10 unified caller pin for the postmerge audit caller; native PR audit pin stays SHARED
 NATIVE_PR_AUDIT_SHARED = SHARED  # original PR association stays independently enforced

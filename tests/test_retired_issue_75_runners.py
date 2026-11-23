@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 WF = ROOT / ".github" / "workflows"
+HISTORICAL_WF = ROOT / "tests" / "fixtures" / "historical-workflows"
 
 
 class RetiredIssue75Runners(unittest.TestCase):
@@ -14,8 +15,7 @@ class RetiredIssue75Runners(unittest.TestCase):
                 self.assertFalse((WF / name).exists())
 
     def test_live_build_and_historical_evidence_remain(self):
-        for name in ("windows.yml", "promote.yml", "test-step19-hooks.yml",
-                     ):
+        for name in ("windows.yml", "test-step19-hooks.yml"):
             with self.subTest(name=name):
                 self.assertTrue((WF / name).is_file())
         self.assertTrue((ROOT / "scripts/issue_75_go_a_readonly_recover.py").is_file())
@@ -34,10 +34,10 @@ class RetiredIssue75Runners(unittest.TestCase):
                      "test_phase_d_live_deny_workflow.py"):
             self.assertTrue((ROOT / "tests" / name).is_file())
             self.assertIn(name, syntax)
-        for name in ("windows.yml", "promote.yml", "update-watch.yml",
-                     "test-step19-hooks.yml"):
+        for name in ("windows.yml", "update-watch.yml", "test-step19-hooks.yml"):
             self.assertTrue((WF / name).is_file())
-        promote = (WF / "promote.yml").read_text(encoding="utf-8")
+        self.assertFalse((WF / "promote.yml").exists())
+        promote = (HISTORICAL_WF / "promote.yml").read_text(encoding="utf-8")
         self.assertIn("      confirm_release: PUBLISH", promote)
         self.assertIn("promote-verified-release.yml@", promote)
         self.assertNotIn("pull_request_target:", syntax)
@@ -59,7 +59,7 @@ class RetiredIssue75Runners(unittest.TestCase):
         self.assertTrue((ROOT / "tests/test_pg14_backfill.py").is_file())
         live = (WF / "test-step19-hooks.yml").read_text(encoding="utf-8")
         windows = (WF / "windows.yml").read_text(encoding="utf-8")
-        promotion = (WF / "promote.yml").read_text(encoding="utf-8")
+        promotion = (HISTORICAL_WF / "promote.yml").read_text(encoding="utf-8")
         self.assertIn("tests/test_promotion_workflow.py", live)
         self.assertIn("tests/test_pg14_backfill.py", windows)
         self.assertIn("name: Windows required summary", windows)
