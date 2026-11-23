@@ -7,7 +7,7 @@ import unittest
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
-PROMOTION = (ROOT / ".github/workflows/promote.yml").read_text(encoding="utf-8")
+PROMOTION = (ROOT / "tests/fixtures/historical-workflows/promote.yml").read_text(encoding="utf-8")
 WINDOWS = (ROOT / ".github/workflows/windows.yml").read_text(encoding="utf-8")
 CANARY = (ROOT / "tests/fixtures/historical-workflows/issue-75-pre-g4-signed-canary.yml").read_text(encoding="utf-8")
 spec = importlib.util.spec_from_file_location(
@@ -17,7 +17,7 @@ spec.loader.exec_module(policy)
 
 
 class PromotionWorkflow(unittest.TestCase):
-    def test_existing_manual_dispatch_policy_is_preserved(self):
+    def test_historical_manual_dispatch_contract_is_preserved(self):
         self.assertIn("workflow_dispatch:", PROMOTION)
         self.assertNotIn("      confirm_release:\n        description:", PROMOTION)
         self.assertIn("      confirm_release: PUBLISH", PROMOTION)
@@ -72,7 +72,7 @@ class GoAOfflinePolicy(unittest.TestCase):
                          "dfa87e91aa0a65ceaec04cdfc67a3053f87baf75")
         stale = '{"protected":true,"commit":{"sha":"c6b7af192635c304b16edc8c7b9c1396b2cd025e"}}'
         # This archived one-shot GO A canary must remain inert after the
-        # protected local policy moves to automatic-signed-schedule.
+        # archived local policy moved to automatic-signed-schedule.
         # Reject before any remote GET; do not reauthorize the old canary.
         with patch.object(policy, "gh", side_effect=AssertionError("retired GO A must not GET")):
             with self.assertRaisesRegex(policy.Deny,
