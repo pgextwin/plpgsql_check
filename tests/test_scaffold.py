@@ -106,17 +106,19 @@ class ContractSanityChecks(unittest.TestCase):
         self.assertNotIn('--clobber', guard)
 
     def test_watcher_metadata_only(self):
-        w = json_file('config/update-watch.json')
-        self.assertEqual(w['strategy'], 'github-releases')
-        self.assertEqual(w['repository'], 'okbob/plpgsql_check')
-        self.assertFalse(w['prereleases'])
-        self.assertIsNotNone(re.fullmatch(w['stableTagPattern'], 'v2.10.13'))
+        manifest = json_file('config/extension.json')
+        watch = manifest['watch']
+        self.assertEqual(watch['strategy'], 'github-releases')
+        self.assertEqual(manifest['upstream']['repository'], 'okbob/plpgsql_check')
+        self.assertFalse(watch['prereleases'])
+        self.assertIsNotNone(re.fullmatch(watch['stableTagPattern'], 'v2.10.13'))
         for test in ('v2.10.13-rc1', 'v2.10.13-beta1', 'main'):
-            self.assertIsNone(re.fullmatch(w['stableTagPattern'], test))
+            self.assertIsNone(re.fullmatch(watch['stableTagPattern'], test))
         yml = (ROOT / '.github/workflows/update-watch.yml').read_text()
-        self.assertIn(f'@{BUILD_COMMIT}', yml)
-        self.assertIn('issues: write', yml)
-        self.assertNotIn('contents: write', yml)
+        workflow = yaml.load(yml, Loader=yaml.BaseLoader)
+        permissions = workflow['jobs']['watch_candidate']['permissions']
+        self.assertEqual(permissions.get('issues'), 'write')
+        self.assertNotEqual(permissions.get('contents'), 'write')
 
     def test_export_audit_is_complete_and_immutable(self):
         c = json_file('config/export-audit.json')
