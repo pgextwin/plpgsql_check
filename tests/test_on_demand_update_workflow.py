@@ -12,9 +12,9 @@ import re
 PATH = Path(".github/workflows/update-watch.yml")
 SHARED = "9ec4dde0b6defabc10cf3527c06cb69c13e5a7ff"
 STAGE = "3e5300afa99b99ea8c11be2a6ef75c994d708c28"  # verified six-blob scheduled closure; non-schedule audit pins remain separate
-SIGNED_AUDIT_PIN = "0ba07c7ad9fdbf20afba0a10264ecadb01ecc3df"  # B5 signed-audit pin advance
+SIGNED_AUDIT_PIN = "f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f"  # Fixed shared packaging audit
 SCHEDULED_SHARED = "3e5300afa99b99ea8c11be2a6ef75c994d708c28"  # read-only central receipt pin; candidate writers stay STAGE
-NATIVE_READERS_SHARED = "7788623fa49e56b1301090bea4f023ea86405657"  # J10 unified caller pin for the postmerge audit caller; native PR audit pin stays SHARED
+NATIVE_READERS_SHARED = "6b6dbab7128394a666fdb97e3bcccb29cf67c090"  # Fixed PG19-aware postmerge observer
 NATIVE_PR_AUDIT_SHARED = SHARED  # original PR association stays independently enforced
 PIN = "3e5300afa99b99ea8c11be2a6ef75c994d708c28"
 
@@ -110,8 +110,8 @@ def verify(src):
         "github.ref == 'refs/heads/main'",
         "needs.candidate_main_merge_observation.result == 'success'",
         "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
-        "    permissions:\n      contents: read\n      id-token: write\n      attestations: write\n      artifact-metadata: write",
-        "uses: pgextwin/build/.github/workflows/build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d",
+        "    permissions:\n      contents: read\n      actions: read\n      issues: read\n      id-token: write\n      attestations: write\n      artifact-metadata: write",
+        "uses: pgextwin/build/.github/workflows/build-extension-attested.yml@152e2a2575612f5b76960b74b1f3d599235b193e",
         "extension_config_path: config/extension.json",
         "test_contract_path: config/test-contract.json",
     )
@@ -157,8 +157,8 @@ def verify(src):
         "github.ref == 'refs/heads/main'",
         "needs.authorize.result == 'success'",
         "needs.authorize.outputs.mode == 'none'",
-        "    permissions:\n      contents: read\n      actions: read\n      checks: read\n      pull-requests: read\n      id-token: write\n      attestations: write\n      artifact-metadata: write",
-        "uses: pgextwin/build/.github/workflows/requalify-merged-candidate-signed.yml@12e9c809d963c82735e23680ac1838693a6de356",
+        "    permissions:\n      contents: read\n      issues: read\n      actions: read\n      checks: read\n      pull-requests: read\n      id-token: write\n      attestations: write\n      artifact-metadata: write",
+        "uses: pgextwin/build/.github/workflows/requalify-merged-candidate-signed.yml@f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f",
     )
     for marker in required_merged:
         if marker not in merged:
@@ -197,7 +197,7 @@ def main():
          + "\n    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@" + SIGNED_AUDIT_PIN),
         ("needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true'",
          "needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'false'"),
-        ("build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d", "build-extension-attested.yml@main"),
+        ("build-extension-attested.yml@152e2a2575612f5b76960b74b1f3d599235b193e", "build-extension-attested.yml@main"),
         ("      attestations: write", "      attestations: read"),
         ('    branches: [main]', '    branches: [develop]'),
         ('      - "config/extension.json"', '      - ".github/workflows/update-watch.yml"'),
@@ -225,7 +225,7 @@ def main():
          "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@main"),
         ("      issues: write", "      contents: write"),
         ("      actions: write", "      actions: read"),
-        ("requalify-merged-candidate-signed.yml@12e9c809d963c82735e23680ac1838693a6de356",
+        ("requalify-merged-candidate-signed.yml@f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f",
          "requalify-merged-candidate-signed.yml@main"),
         ("needs.authorize.outputs.mode == 'none'",
          "needs.authorize.outputs.mode == 'candidate'"),

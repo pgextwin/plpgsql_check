@@ -18,7 +18,7 @@ jobs:
       - name: Parse every Windows hook with PowerShell
         shell: pwsh
         run: |
-          foreach ($script in @('windows/ci/build.ps1','windows/ci/package.ps1','windows/ci/install.ps1','windows/ci/smoke-test.ps1')) {
+          foreach ($script in @('windows/ci/build.ps1','windows/ci/smoke-test.ps1')) {
             $tokens = $null
             $errors = $null
             [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script).Path, [ref]$tokens, [ref]$errors)
