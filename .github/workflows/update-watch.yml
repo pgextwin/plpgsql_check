@@ -88,7 +88,7 @@ jobs:
       actions: read
       pull-requests: read
       checks: read
-    uses: pgextwin/build/.github/workflows/automatic-postmerge-audit-readonly.yml@7788623fa49e56b1301090bea4f023ea86405657
+    uses: pgextwin/build/.github/workflows/automatic-postmerge-audit-readonly.yml@6b6dbab7128394a666fdb97e3bcccb29cf67c090
 
   candidate_attested_build:
     name: Attest original candidate after verified protected main merge (NO PUBLISH)
@@ -100,10 +100,12 @@ jobs:
           needs.candidate_main_merge_observation.outputs.verified_signed_build_intent == 'true' }}
     permissions:
       contents: read
+      actions: read
+      issues: read
       id-token: write
       attestations: write
       artifact-metadata: write
-    uses: pgextwin/build/.github/workflows/build-extension-attested.yml@5756b3c5136a8bf4db710016cfe97555f0a71c6d
+    uses: pgextwin/build/.github/workflows/build-extension-attested.yml@152e2a2575612f5b76960b74b1f3d599235b193e
     with:
       extension_config_path: config/extension.json
       test_contract_path: config/test-contract.json
@@ -120,7 +122,7 @@ jobs:
       contents: read
       actions: read
       attestations: read
-    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@0ba07c7ad9fdbf20afba0a10264ecadb01ecc3df
+    uses: pgextwin/build/.github/workflows/verify-signed-candidate-readonly.yml@f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f
 
   merged_candidate_scheduled_oidc:
     name: Requalify existing merged candidate with genuine OIDC signature (NO RELEASE)
@@ -132,10 +134,11 @@ jobs:
           needs.authorize.outputs.mode == 'none' }}
     permissions:
       contents: read
+      issues: read
       actions: read
       checks: read
       pull-requests: read
       id-token: write
       attestations: write
       artifact-metadata: write
-    uses: pgextwin/build/.github/workflows/requalify-merged-candidate-signed.yml@12e9c809d963c82735e23680ac1838693a6de356
+    uses: pgextwin/build/.github/workflows/requalify-merged-candidate-signed.yml@f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f

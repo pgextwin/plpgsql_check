@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "distribution": "dll-sql",
+  "files": [
+    {
+      "source": "upstream",
+      "path": "plpgsql_check.dll",
+      "destination": "lib/plpgsql_check.dll",
+      "targets": [
+        "install",
+        "zip"
+      ]
+    },
+    {
+      "source": "upstream",
+      "path": "plpgsql_check.control",
+      "destination": "share/extension/plpgsql_check.control",
+      "targets": [
+        "install",
+        "zip"
+      ]
+    },
+    {
+      "source": "license",
+      "path": "LICENSE",
+      "destination": "LICENSE",
+      "targets": [
+        "zip"
+      ]
+    },
+    {
+      "source": "upstream",
+      "path": "README.md",
+      "destination": "UPSTREAM-README.md",
+      "targets": [
+        "zip"
+      ]
+    },
+    {
+      "source": "packaging",
+      "path": "README.md",
+      "destination": "PGEXTWIN-README.md",
+      "targets": [
+        "zip"
+      ]
+    },
+    {
+      "source": "upstream",
+      "path": "plpgsql_check--*.sql",
+      "destination": "share/extension/{fileName}",
+      "targets": [
+        "install",
+        "zip"
+      ],
+      "expectedCount": 1
+    }
+  ],
+  "packageInfo": [
+    "plpgsql_check Windows binary package (unofficial pgextwin release)",
+    "=======================================================",
+    "Upstream repository: {upstreamRepository}",
+    "Upstream ref: {upstreamRef}",
+    "Upstream commit: {upstreamCommit}",
+    "Extension version: {version}",
+    "SQL extension version: 2.11",
+    "PostgreSQL major: {pgMajor}",
+    "PostgreSQL tested: {pgTested}",
+    "Architecture: Windows x64",
+    "Compiler: MSVC",
+    "License: MIT-style; see LICENSE",
+    "",
+    "This is an unofficial pgextwin Windows binary; not an official upstream distribution.",
+    "Copy lib/plpgsql_check.dll to PostgreSQL's lib directory and",
+    "share/extension/* to its share/extension directory. CREATE EXTENSION plpgsql_check;",
+    "Active linting via plpgsql_check_function_tb does not require shared preload.",
+    "Profiler, tracer, passive/shared modes and SQL upgrades are not covered by release CI."
+  ],
+  "packageInfoFinalNewline": false,
+  "sqlVersion": "2.11"
+}
