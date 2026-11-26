@@ -54,7 +54,6 @@ jobs:
     with:
       extension_config_path: config/extension.json
       update_watch_path: config/update-watch.json
-      candidate_policy_path: config/candidate-build.json
       dry_run: false
 
   candidate_native_pr_audit:
