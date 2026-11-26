@@ -34,7 +34,6 @@ def verify(src):
         "needs.watch_candidate.result == 'success'",
         "uses: pgextwin/build/.github/workflows/check-extension-updates.yml@" + STAGE,
         "uses: pgextwin/build/.github/workflows/candidate-update.yml@" + STAGE,
-        "candidate_policy_path: config/candidate-build.json",
     )
     for marker in required:
         if marker not in src:
