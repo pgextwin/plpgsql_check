@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 
 PATH = Path(".github/workflows/update-watch.yml")
-SHARED = "9ec4dde0b6defabc10cf3527c06cb69c13e5a7ff"
+SHARED = "2cdc97df7cd5cb7d21993f165bafc4f111bfedc4"
 STAGE = "699cfd6c73a287e289c15f0e07db03f8c8159524"  # verified six-blob scheduled closure; non-schedule audit pins remain separate
 SIGNED_AUDIT_PIN = "f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f"  # Fixed shared packaging audit
 SCHEDULED_SHARED = "699cfd6c73a287e289c15f0e07db03f8c8159524"  # read-only central receipt pin; candidate writers stay STAGE
