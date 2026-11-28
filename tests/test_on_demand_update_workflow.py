@@ -14,7 +14,7 @@ SHARED = "2cdc97df7cd5cb7d21993f165bafc4f111bfedc4"
 STAGE = "699cfd6c73a287e289c15f0e07db03f8c8159524"  # verified six-blob scheduled closure; non-schedule audit pins remain separate
 SIGNED_AUDIT_PIN = "f4b67e90c21e9d5320aeb5b2032ebaf25ba60f6f"  # Fixed shared packaging audit
 SCHEDULED_SHARED = "699cfd6c73a287e289c15f0e07db03f8c8159524"  # read-only central receipt pin; candidate writers stay STAGE
-NATIVE_READERS_SHARED = "6b6dbab7128394a666fdb97e3bcccb29cf67c090"  # Fixed PG19-aware postmerge observer
+NATIVE_READERS_SHARED = "5cabea3f79096b20fd80ac479d6738b01439821d"  # Fixed PG19-aware postmerge observer
 NATIVE_PR_AUDIT_SHARED = SHARED  # original PR association stays independently enforced
 PIN = "699cfd6c73a287e289c15f0e07db03f8c8159524"
 
